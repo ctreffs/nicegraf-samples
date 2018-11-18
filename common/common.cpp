@@ -65,7 +65,7 @@ ngf::shader_stage load_shader_stage(const char *root_name,
   ngf_shader_stage_info stage_info;
   stage_info.type = type;
   stage_info.content = content.data();
-  stage_info.content_length = content.size();
+  stage_info.content_length = (uint32_t)content.size();
   stage_info.debug_name = "";
   ngf::shader_stage stage;
   ngf_error err = stage.initialize(stage_info);
