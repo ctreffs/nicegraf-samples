@@ -35,19 +35,95 @@ SOFTWARE.
 #include <fstream>
 
 #include "common.h"
+#include "imgui_ngf_backend.h"
+#include <examples/imgui_impl_glfw.h>
+
+void debugmsg_cb(const char *msg, const void*) {
+  // TODO: surface these logs in a GUI console.
+  printf("%s\n", msg);
+}
 
 void on_initialized(uintptr_t handle, uint32_t w, uint32_t h);
+void on_start_frame(uint32_t w, uint32_t h);
+void on_end_frame();
+void on_ui();
 
+// This is the "common main" for desktop apps.
 int main(int argc, char **argv) {
+  // Initialize GLFW.
   glfwInit();
+  
+  // Tell GLFW not to attempt to create an API context (nicegraf does it for
+  // us).
   glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
+
+  // Create the window.
   GLFWwindow *win =
-      glfwCreateWindow(800, 600, "nicegraf sample", nullptr, nullptr);
+      glfwCreateWindow(1024, 768, "nicegraf sample", nullptr, nullptr);
   assert(win != nullptr);
+
+  // Notify the app.
   on_initialized(
-      reinterpret_cast<uintptr_t>(GET_GLFW_NATIVE_HANDLE(win)), 800, 600);
-  while (!glfwWindowShouldClose(win)) {
-    glfwPollEvents();
+      reinterpret_cast<uintptr_t>(GET_GLFW_NATIVE_HANDLE(win)), 1024, 768);
+
+#if !defined(NDEBUG)
+  // Install debug message callback in debug mode only.
+  ngf_debug_message_callback(nullptr, debugmsg_cb);
+#endif
+
+  // Initialize ImGUI.
+  ImGui::SetCurrentContext(ImGui::CreateContext());
+  ImGui_ImplGlfw_InitForOpenGL(win, true);
+
+  ngf_imgui ui; // State of the ngf ImGUI backend.
+
+  // Create a render pass for rendering the UI.
+  ngf_attachment_load_op ui_layer_load_op = NGF_LOAD_OP_KEEP;
+  ngf_pass_info ui_pass_info {
+    &ui_layer_load_op,
+    0u,
+    nullptr
+  };
+  ngf::pass ui_pass;
+  ui_pass.initialize(ui_pass_info);
+ 
+  // Create a command buffer the UI rendering commands.
+  ngf_cmd_buffer *uibuf = nullptr;
+  ngf_cmd_buffer_create(&uibuf);
+
+  // Obtain the default render target.
+  ngf_render_target *defaultrt = nullptr;
+  ngf_default_render_target(&defaultrt);
+
+  while (!glfwWindowShouldClose(win)) { // Main loop.
+    glfwPollEvents(); // Get input events.
+
+    // Update renderable area size.
+    int win_size_x = 0, win_size_y = 0;
+    glfwGetFramebufferSize(win, &win_size_x, &win_size_y);
+
+    // Notify application.
+    on_start_frame(win_size_x, win_size_y);
+
+    // Give application a chance to submit its UI drawing commands.
+    // TODO: make toggleable.
+    ImGui::GetIO().DisplaySize.x = (float)win_size_x;
+    ImGui::GetIO().DisplaySize.y = (float)win_size_y;
+    ImGui::NewFrame();
+    ImGui_ImplGlfw_NewFrame();
+    on_ui();
+    // TODO: draw debug console window.
+
+    // Draw the UI.
+    ngf_cmd_buffer_start(uibuf);
+    ngf_cmd_begin_pass(uibuf, ui_pass, defaultrt);
+    ui.record_rendering_commands(uibuf);
+    ngf_cmd_end_pass(uibuf);
+    ngf_cmd_buffer_end(uibuf);
+    ngf_cmd_buffer_submit(1u, &uibuf);
+
+    // End frame.
+    on_end_frame();
   }
   return 0;
 }
@@ -67,6 +143,7 @@ ngf::shader_stage load_shader_stage(const char *root_name,
   stage_info.content = content.data();
   stage_info.content_length = (uint32_t)content.size();
   stage_info.debug_name = "";
+  stage_info.is_binary = false;
   ngf::shader_stage stage;
   ngf_error err = stage.initialize(stage_info);
   assert(err == NGF_ERROR_OK);
