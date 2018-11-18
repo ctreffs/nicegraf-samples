@@ -1,10 +1,13 @@
 #include "imgui_ngf_backend.h"
+#include "common.h"
 #include <nicegraf_util.h>
 #include <assert.h>
 #include <vector>
 
-ngf_imgui::ngf_imgui(const ngf_shader_stage *vertex_stage,
-                     const ngf_shader_stage *fragment_stage) {
+ngf_imgui::ngf_imgui() {
+  vertex_stage_ = load_shader_stage("imgui", NGF_STAGE_VERTEX);
+  fragment_stage_ = load_shader_stage("imgui", NGF_STAGE_FRAGMENT);
+
   // Initial pipeline configuration with OpenGL-style defaults.
   ngf_util_graphics_pipeline_data pipeline_data;
   ngf_util_create_default_graphics_pipeline_data(nullptr,
@@ -36,8 +39,8 @@ ngf_imgui::ngf_imgui(const ngf_shader_stage *vertex_stage,
   // Assign programmable stages.
   ngf_graphics_pipeline_info &pipeline_info = pipeline_data.pipeline_info;
   pipeline_info.nshader_stages = 2u;
-  pipeline_info.shader_stages[0] = vertex_stage;
-  pipeline_info.shader_stages[1] = fragment_stage;
+  pipeline_info.shader_stages[0] = vertex_stage_.get();
+  pipeline_info.shader_stages[1] = fragment_stage_.get();
 
   // Configure vertex input.
   ngf_vertex_attrib_desc vertex_attribs[] = {
@@ -70,6 +73,7 @@ ngf_imgui::ngf_imgui(const ngf_shader_stage *vertex_stage,
     {(uint32_t)width, (uint32_t)height, 1u}, // extent
     1u, // nmips
     NGF_IMAGE_FORMAT_RGBA8, // image_format
+    0u, // nsamples
     NGF_IMAGE_USAGE_SAMPLE_FROM // usage_hint
   };
   err = font_texture_.initialize(font_texture_info);
@@ -133,8 +137,10 @@ ngf_imgui::ngf_imgui(const ngf_shader_stage *vertex_stage,
   ngf_apply_descriptor_writes(writes, 2u, desc_set_);
 }
 
-void ngf_imgui::record_rendering_commands(ImDrawData *data,
-                                          ngf_cmd_buffer *cmdbuf) {
+void ngf_imgui::record_rendering_commands(ngf_cmd_buffer *cmdbuf) {
+  ImGui::Render();
+  ImDrawData *data = ImGui::GetDrawData();
+  if (data->TotalIdxCount <= 0) return;
   //Compute effective viewport width and height, apply scaling for
   // retina/high-dpi displays.
   ImGuiIO& io = ImGui::GetIO();
@@ -176,10 +182,32 @@ void ngf_imgui::record_rendering_commands(ImDrawData *data,
 
   // These vectors will store vertex and index data for the draw calls.
   // Later this data will be transferred to GPU buffers.
-  std::vector<ImDrawVert> vertex_data(data->TotalVtxCount);
-  std::vector<ImDrawIdx> index_data(data->TotalIdxCount);
+  std::vector<ImDrawVert> vertex_data(data->TotalVtxCount, ImDrawVert());
+  std::vector<ImDrawIdx> index_data(data->TotalIdxCount, 0u);
   uint32_t last_vertex = 0u;
   uint32_t last_index = 0u;
+
+  // Create new vertex and index buffers.
+  ngf_buffer_info vertex_buffer_info{
+    sizeof(ImDrawVert) * vertex_data.size(),
+    NGF_BUFFER_TYPE_VERTEX,
+    NGF_BUFFER_USAGE_STREAM,
+    NGF_BUFFER_ACCESS_DRAW
+  };
+  vertex_buffer_.initialize(vertex_buffer_info);
+  ngf_buffer_info index_buffer_info{
+    sizeof(ImDrawIdx) * index_data.size(),
+    NGF_BUFFER_TYPE_INDEX,
+    NGF_BUFFER_USAGE_STREAM,
+    NGF_BUFFER_ACCESS_DRAW
+  };
+  index_buffer_.initialize(index_buffer_info);
+
+  // Bind vertex and index buffers.
+  ngf_cmd_bind_index_buffer(cmdbuf, index_buffer_,
+                            sizeof(ImDrawIdx) < 4
+                                ? NGF_TYPE_UINT16 : NGF_TYPE_UINT32);
+  ngf_cmd_bind_vertex_buffer(cmdbuf, vertex_buffer_, 0u, 0u);
 
   // Process each ImGui command list and translate it into the nicegraf
   // command buffer.
@@ -223,22 +251,6 @@ void ngf_imgui::record_rendering_commands(ImDrawData *data,
     }
   }
 
-  // Create new vertex and index buffers.
-  ngf_buffer_info vertex_buffer_info{
-    sizeof(ImDrawVert) * vertex_data.size(),
-    NGF_BUFFER_TYPE_VERTEX,
-    NGF_BUFFER_USAGE_STREAM,
-    NGF_BUFFER_ACCESS_DRAW
-  };
-  vertex_buffer_.initialize(vertex_buffer_info);
-  ngf_buffer_info index_buffer_info{
-    sizeof(ImDrawIdx) * index_data.size(),
-    NGF_BUFFER_TYPE_INDEX,
-    NGF_BUFFER_USAGE_STREAM,
-    NGF_BUFFER_ACCESS_DRAW
-  };
-  index_buffer_.initialize(index_buffer_info);
-
   // Fill vertex and index buffers with data.
   ngf_populate_buffer(vertex_buffer_, 0u,
                       vertex_data.size() * sizeof(ImDrawVert),
@@ -246,10 +258,4 @@ void ngf_imgui::record_rendering_commands(ImDrawData *data,
   ngf_populate_buffer(index_buffer_, 0u,
                       index_data.size() * sizeof(ImDrawIdx),
                       index_data.data());
-
-  // Bind vertex and index buffers.
-  ngf_cmd_bind_index_buffer(cmdbuf, index_buffer_,
-                            sizeof(ImDrawIdx) < 4
-                                ? NGF_TYPE_INT16 : NGF_TYPE_INT32);
-  ngf_cmd_bind_vertex_buffer(cmdbuf, vertex_buffer_, 0u, 0u);
 }

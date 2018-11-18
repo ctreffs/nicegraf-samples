@@ -8,12 +8,11 @@
 class ngf_imgui {
 public:
   // Initializes the internal state of the ImGui rendering backend.
-  ngf_imgui(const ngf_shader_stage *vertex_stage,
-            const ngf_shader_stage *fragment_stage);
+  ngf_imgui();
 
   // Records commands for rendering the contents of ImGui draw data into the
   // given command buffer.
-  void record_rendering_commands(ImDrawData *data, ngf_cmd_buffer *cmdbuf);
+  void record_rendering_commands(ngf_cmd_buffer *cmdbuf);
 
 private:
   ngf::graphics_pipeline pipeline_;
@@ -23,4 +22,6 @@ private:
   ngf::sampler tex_sampler_;
   ngf::buffer vertex_buffer_;
   ngf::buffer index_buffer_;
+  ngf::shader_stage vertex_stage_;
+  ngf::shader_stage fragment_stage_;
 };
