@@ -31,14 +31,21 @@ set(GLFW_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
 add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/third_party/glfw)
 
 add_library(imgui
-  ${CMAKE_CURRENT_LIST_DIR}/third_party/imgui/imgui.cpp)
-  
+  ${CMAKE_CURRENT_LIST_DIR}/third_party/imgui/imgui.cpp
+  ${CMAKE_CURRENT_LIST_DIR}/third_party/imgui/imgui_draw.cpp
+  ${CMAKE_CURRENT_LIST_DIR}/third_party/imgui/imgui_widgets.cpp
+  ${CMAKE_CURRENT_LIST_DIR}/third_party/imgui/imgui_demo.cpp
+  ${CMAKE_CURRENT_LIST_DIR}/third_party/imgui/examples/imgui_impl_glfw.cpp)
+
 target_include_directories(imgui PUBLIC
   ${CMAKE_CURRENT_LIST_DIR}/third_party/imgui)
 
+target_link_libraries(imgui glfw)
+  
 set(NGF_SAMPLES_COMMON_SOURCES
   ${CMAKE_CURRENT_LIST_DIR}/common/common.cpp
   ${CMAKE_CURRENT_LIST_DIR}/common/common.h
+  ${CMAKE_CURRENT_LIST_DIR}/common/imgui_ngf_backend.h
   ${CMAKE_CURRENT_LIST_DIR}/common/imgui_ngf_backend.cpp)
 
 add_library(common
