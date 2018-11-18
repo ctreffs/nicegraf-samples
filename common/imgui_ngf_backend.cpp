@@ -26,7 +26,7 @@ ngf_imgui::ngf_imgui() {
   // Set up blend state.
   pipeline_data.blend_info.enable = true;
   pipeline_data.blend_info.sfactor = NGF_BLEND_FACTOR_SRC_ALPHA;
-  pipeline_data.blend_info.dfactor = NGF_BLEND_FACTOR_DST_ALPHA;
+  pipeline_data.blend_info.dfactor = NGF_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
 
   // Set up depth & stencil state.
   pipeline_data.depth_stencil_info.depth_test = false;
@@ -222,10 +222,12 @@ void ngf_imgui::record_rendering_commands(ngf_cmd_buffer *cmdbuf) {
     for (int a = 0u; a < imgui_cmd_list->IdxBuffer.Size; ++a) {
       // ImGui uses separate index buffers, but we'll use just one. We will
       // update the index values accordingly.
-      index_data[last_index + a] = last_index + imgui_cmd_list->IdxBuffer[a];
+      index_data[last_index + a] = last_vertex + imgui_cmd_list->IdxBuffer[a];
     }
-
+    last_vertex += imgui_cmd_list->VtxBuffer.Size;
+    
     // Process each ImGui command in the draw list.
+    uint32_t idx_buffer_sub_offset = 0u;
     for (int j = 0u; j < imgui_cmd_list->CmdBuffer.Size; ++j) {
       const ImDrawCmd &cmd = imgui_cmd_list->CmdBuffer[j];
       if (cmd.UserCallback != nullptr) {
@@ -245,10 +247,13 @@ void ngf_imgui::record_rendering_commands(ngf_cmd_buffer *cmdbuf) {
             (uint32_t)(clip_rect.w - clip_rect.y)
           };
           ngf_cmd_scissor(cmdbuf, &scissor_rect);
-          ngf_cmd_draw(cmdbuf, true, last_index, (uint32_t)cmd.ElemCount, 1u);
+          ngf_cmd_draw(cmdbuf, true, last_index + idx_buffer_sub_offset,
+                       (uint32_t)cmd.ElemCount, 1u);
+          idx_buffer_sub_offset += (uint32_t)cmd.ElemCount;
         }
       }
     }
+    last_index += imgui_cmd_list->IdxBuffer.Size;
   }
 
   // Fill vertex and index buffers with data.
