@@ -4,3 +4,7 @@
 
 ngf::shader_stage load_shader_stage(const char *root_name,
                                     ngf_stage_type type);
+struct init_result {
+  ngf::context context;
+  void *userdata;
+};

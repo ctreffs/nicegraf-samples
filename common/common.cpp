@@ -43,10 +43,9 @@ void debugmsg_cb(const char *msg, const void*) {
   printf("%s\n", msg);
 }
 
-void on_initialized(uintptr_t handle, uint32_t w, uint32_t h);
-void on_start_frame(uint32_t w, uint32_t h);
-void on_end_frame();
-void on_ui();
+init_result on_initialized(uintptr_t handle, uint32_t w, uint32_t h);
+void on_frame(uint32_t w, uint32_t h, void *userdata);
+void on_ui(void *userdata);
 
 // This is the "common main" for desktop apps.
 int main(int argc, char **argv) {
@@ -63,7 +62,7 @@ int main(int argc, char **argv) {
   assert(win != nullptr);
 
   // Notify the app.
-  on_initialized(
+  init_result init_data = on_initialized(
       reinterpret_cast<uintptr_t>(GET_GLFW_NATIVE_HANDLE(win)), 1024, 768);
 
 #if !defined(NDEBUG)
@@ -103,7 +102,7 @@ int main(int argc, char **argv) {
     glfwGetFramebufferSize(win, &win_size_x, &win_size_y);
 
     // Notify application.
-    on_start_frame(win_size_x, win_size_y);
+    on_frame(win_size_x, win_size_y, init_data.userdata);
 
     // Give application a chance to submit its UI drawing commands.
     // TODO: make toggleable.
@@ -111,7 +110,7 @@ int main(int argc, char **argv) {
     ImGui::GetIO().DisplaySize.y = (float)win_size_y;
     ImGui::NewFrame();
     ImGui_ImplGlfw_NewFrame();
-    on_ui();
+    on_ui(init_data.userdata);
     // TODO: draw debug console window.
 
     // Draw the UI.
@@ -123,7 +122,7 @@ int main(int argc, char **argv) {
     ngf_cmd_buffer_submit(1u, &uibuf);
 
     // End frame.
-    on_end_frame();
+    ngf_end_frame(init_data.context);
   }
   return 0;
 }

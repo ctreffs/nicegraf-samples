@@ -17,6 +17,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
+#include "common.h"
 #include <nicegraf.h>
 #include <nicegraf_wrappers.h>
 #include <imgui.h>
@@ -28,8 +29,9 @@ ngf::pass clear_pass;
 ngf_render_target *default_rt;
 
 // Called upon application initialization.
-void on_initialized(uintptr_t native_handle,
-                    uint32_t initial_width, uint32_t initial_height) {
+init_result on_initialized(uintptr_t native_handle,
+                           uint32_t initial_width,
+                           uint32_t initial_height) {
   ngf_error err = ngf_initialize(NGF_DEVICE_PREFERENCE_DONTCARE);
   assert(err == NGF_ERROR_OK);
 
@@ -75,10 +77,12 @@ void on_initialized(uintptr_t native_handle,
   };
   err = clear_pass.initialize(pass_info);
   assert(err == NGF_ERROR_OK);
+
+  return { std::move(nicegraf_context), nullptr};
 }
 
 // Called every frame.
-void on_start_frame(uint32_t w, uint32_t h) {
+void on_frame(uint32_t w, uint32_t h, void*) {
   ngf_begin_frame(nicegraf_context.get());
   ngf_cmd_buffer *cmd_buf = nullptr;
   ngf_cmd_buffer_create(&cmd_buf);
@@ -90,11 +94,8 @@ void on_start_frame(uint32_t w, uint32_t h) {
   ngf_cmd_buffer_destroy(cmd_buf);
 }
 
-// Called at the end of each frame.
-void on_end_frame() { ngf_end_frame(nicegraf_context.get()); }
-
 // Called every time the application has to dra an ImGUI overlay.
-void on_ui() {
+void on_ui(void*) {
   ImGui::ShowDemoWindow();
 }
 
