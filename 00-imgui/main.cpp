@@ -102,3 +102,7 @@ void on_ui(void*) {
   ImGui::ShowDemoWindow();
 }
 
+void on_shutdown(void *userdata) {
+  delete (app_state*)userdata;
+}
+
