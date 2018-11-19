@@ -24,6 +24,13 @@ cmake_minimum_required(VERSION 3.0.2)
 
 project(nicegraf-samples)
 
+if (WIN32)
+  set(COMMON_COMPILE_OPTS "/W4" "/WX")
+else()
+  set(COMMON_COMPILE_OPTS "--std=c++14" "-Wall" "-Wconversion" "-Werror"
+        "-Wno-unknown-pragmas")
+endif()
+
 add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/nicegraf)
 set(GLFW_BUILD_DOCS OFF CACHE BOOL "" FORCE)
 set(GLFW_BUILD_TESTS OFF CACHE BOOL "" FORCE)
@@ -40,6 +47,8 @@ add_library(imgui
 target_include_directories(imgui PUBLIC
   ${CMAKE_CURRENT_LIST_DIR}/third_party/imgui)
 
+target_compile_options(imgui PRIVATE ${COMMON_COMPILE_OPTS})
+
 target_link_libraries(imgui glfw)
   
 set(NGF_SAMPLES_COMMON_SOURCES
@@ -54,6 +63,8 @@ add_library(common
 target_include_directories(common PUBLIC
   ${CMAKE_CURRENT_LIST_DIR}/common)
   
+target_compile_options(common PRIVATE ${COMMON_COMPILE_OPTS})
+
 target_link_libraries(common glfw imgui nicegraf nicegraf_util)
 
 if(WIN32)
@@ -76,6 +87,7 @@ function (add_sample name)
   add_executable(${SAMPLE}
     ${CMAKE_CURRENT_LIST_DIR}/${name}/main.cpp)
   target_link_libraries(${SAMPLE} common ${NGF_OPENGL_LIB})
+  target_compile_options(${SAMPLE} PRIVATE ${COMMON_COMPILE_OPTS})
   set_output_dir(${SAMPLE} "${CMAKE_CURRENT_LIST_DIR}/artifacts")
 endfunction(add_sample)
 
