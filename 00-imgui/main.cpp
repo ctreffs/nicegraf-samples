@@ -102,7 +102,7 @@ void on_ui(void*) {
   ImGui::ShowDemoWindow();
 }
 
+// Called when the app is about to close.
 void on_shutdown(void *userdata) {
   delete (app_state*)userdata;
 }
-
