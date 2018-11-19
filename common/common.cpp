@@ -73,6 +73,16 @@ int main(int argc, char **argv) {
 
   // Initialize ImGUI.
   ImGui::SetCurrentContext(ImGui::CreateContext());
+
+  // Style the controls.
+  ImGui::StyleColorsLight();
+  ImGuiStyle &gui_style = ImGui::GetStyle();
+  gui_style.WindowRounding = 0.0f;
+  gui_style.ScrollbarRounding = 0.0f;
+  gui_style.FrameBorderSize = 1.0f;
+  gui_style.ScrollbarSize = 20.0f;
+  gui_style.WindowTitleAlign.x = 0.5f;
+
   ImGui_ImplGlfw_InitForOpenGL(win, true);
 
   ngf_imgui ui; // State of the ngf ImGUI backend.
