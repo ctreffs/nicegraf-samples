@@ -113,6 +113,8 @@ int main(int argc, char **argv) {
     int win_size_x = 0, win_size_y = 0;
     glfwGetFramebufferSize(win, &win_size_x, &win_size_y);
 
+    ngf_begin_frame(init_data.context);
+
     // Notify application.
     on_frame((uint32_t)win_size_x, (uint32_t)win_size_y, init_data.userdata);
 
