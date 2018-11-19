@@ -19,13 +19,14 @@ SOFTWARE.
 #include <GLFW/glfw3.h>
 #if defined(_WIN32) || defined(_WIN64)
 #define GLFW_EXPOSE_NATIVE_WIN32
-#define GET_GLFW_NATIVE_HANDLE glfwGetWin32Window
+#define GET_GLFW_NATIVE_HANDLE(w) glfwGetWin32Window(w)
 #elif defined(__APPLE__)
 #define GLFW_EXPOSE_NATIVE_COCOA
-#define GET_GLFW_NATIVE_HANDLE glfwGetCocoaWindow
+#include "get_glfw_contentview.h"
+#define GET_GLFW_NATIVE_HANDLE(w) get_glfw_contentview(w)
 #else
 #define GLFW_EXPOSE_NATIVE_X11
-#define GET_GLFW_NATIVE_HANDLE glfwGetX11Window
+#define GET_GLFW_NATIVE_HANDLE(w) glfwGetX11Window(w)
 #endif
 #include <GLFW/glfw3native.h>
 #include <assert.h>

@@ -57,6 +57,11 @@ set(NGF_SAMPLES_COMMON_SOURCES
   ${CMAKE_CURRENT_LIST_DIR}/common/imgui_ngf_backend.h
   ${CMAKE_CURRENT_LIST_DIR}/common/imgui_ngf_backend.cpp)
 
+if(APPLE)
+  set(NGF_SAMPLES_COMMON_SOURCES ${NGF_SAMPLES_COMMON_SOURCES}
+      ${CMAKE_CURRENT_LIST_DIR}/common/get_glfw_contentview.mm)
+endif()
+
 add_library(common
   ${NGF_SAMPLES_COMMON_SOURCES})
  
@@ -92,3 +97,4 @@ function (add_sample name)
 endfunction(add_sample)
 
 add_sample("00-imgui")
+add_sample("01-full-screen-triangle")
