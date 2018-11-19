@@ -85,7 +85,7 @@ init_result on_initialized(uintptr_t native_handle,
 }
 
 // Called every frame.
-void on_frame(uint32_t w, uint32_t h, void *userdata) {
+void on_frame(uint32_t, uint32_t, void *userdata) {
   app_state *state = (app_state*)userdata;
   ngf_cmd_buffer *cmd_buf = nullptr;
   ngf_cmd_buffer_info cmd_info;

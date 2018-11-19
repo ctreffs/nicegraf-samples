@@ -49,7 +49,7 @@ void on_ui(void *userdata);
 void on_shutdown(void *userdata);
 
 // This is the "common main" for desktop apps.
-int main(int argc, char **argv) {
+int main(int, char **) {
   // Initialize GLFW.
   glfwInit();
   
