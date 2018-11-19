@@ -46,6 +46,7 @@ void debugmsg_cb(const char *msg, const void*) {
 init_result on_initialized(uintptr_t handle, uint32_t w, uint32_t h);
 void on_frame(uint32_t w, uint32_t h, void *userdata);
 void on_ui(void *userdata);
+void on_shutdown(void *userdata);
 
 // This is the "common main" for desktop apps.
 int main(int argc, char **argv) {
@@ -124,6 +125,8 @@ int main(int argc, char **argv) {
     // End frame.
     ngf_end_frame(init_data.context);
   }
+  on_shutdown(init_data.userdata);
+  glfwTerminate();
   return 0;
 }
 
