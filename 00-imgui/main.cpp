@@ -24,17 +24,21 @@ SOFTWARE.
 #include <assert.h>
 #include <stdint.h>
 
-ngf::context nicegraf_context;
-ngf::pass clear_pass;
-ngf_render_target *default_rt;
+struct app_state {
+  ngf::pass clear_pass;
+  ngf_render_target *default_rt;
+};
 
 // Called upon application initialization.
 init_result on_initialized(uintptr_t native_handle,
                            uint32_t initial_width,
                            uint32_t initial_height) {
+  app_state *state = new app_state;
+
   ngf_error err = ngf_initialize(NGF_DEVICE_PREFERENCE_DONTCARE);
   assert(err == NGF_ERROR_OK);
 
+  // Create a nicegraf context.
   ngf_swapchain_info swapchain_info = {
     NGF_IMAGE_FORMAT_BGRA8, // color format
     NGF_IMAGE_FORMAT_UNDEFINED, // depth format (none)
@@ -45,14 +49,12 @@ init_result on_initialized(uintptr_t native_handle,
     native_handle,
     NGF_PRESENTATION_MODE_IMMEDIATE, // turn off vsync
   };
-
   ngf_context_info ctx_info = {
     &swapchain_info, // swapchain_info
     nullptr, // shared_context (nullptr, no shared context)
     true     // debug
   };
-
-  // Create a nicegraf context with the above parameters.
+  ngf::context nicegraf_context;
   err = nicegraf_context.initialize(ctx_info);
   assert(err == NGF_ERROR_OK);
 
@@ -61,7 +63,7 @@ init_result on_initialized(uintptr_t native_handle,
   assert(err == NGF_ERROR_OK);
 
   // Obtain the default render target.
-  ngf_default_render_target(&default_rt);
+  ngf_default_render_target(&state->default_rt);
 
   // Set up a render pass.
   ngf_attachment_load_op pass_load_op = NGF_LOAD_OP_CLEAR;
@@ -75,19 +77,20 @@ init_result on_initialized(uintptr_t native_handle,
     1u,
     &clear_info
   };
-  err = clear_pass.initialize(pass_info);
+  err = state->clear_pass.initialize(pass_info);
+  
   assert(err == NGF_ERROR_OK);
 
-  return { std::move(nicegraf_context), nullptr};
+  return { std::move(nicegraf_context), state};
 }
 
 // Called every frame.
-void on_frame(uint32_t w, uint32_t h, void*) {
-  ngf_begin_frame(nicegraf_context.get());
+void on_frame(uint32_t w, uint32_t h, void *userdata) {
+  app_state *state = (app_state*)userdata;
   ngf_cmd_buffer *cmd_buf = nullptr;
   ngf_cmd_buffer_create(&cmd_buf);
   ngf_cmd_buffer_start(cmd_buf);
-  ngf_cmd_begin_pass(cmd_buf, clear_pass, default_rt);
+  ngf_cmd_begin_pass(cmd_buf, state->clear_pass, state->default_rt);
   ngf_cmd_end_pass(cmd_buf);
   ngf_cmd_buffer_end(cmd_buf);
   ngf_cmd_buffer_submit(1u, &cmd_buf);
