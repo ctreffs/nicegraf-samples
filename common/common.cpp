@@ -99,7 +99,8 @@ int main(int argc, char **argv) {
  
   // Create a command buffer the UI rendering commands.
   ngf_cmd_buffer *uibuf = nullptr;
-  ngf_cmd_buffer_create(&uibuf);
+  ngf_cmd_buffer_info uibuf_info;
+  ngf_create_cmd_buffer(&uibuf_info, &uibuf);
 
   // Obtain the default render target.
   ngf_render_target *defaultrt = nullptr;
@@ -125,12 +126,12 @@ int main(int argc, char **argv) {
     // TODO: draw debug console window.
 
     // Draw the UI.
-    ngf_cmd_buffer_start(uibuf);
+    ngf_start_cmd_buffer(uibuf);
     ngf_cmd_begin_pass(uibuf, ui_pass, defaultrt);
     ui.record_rendering_commands(uibuf);
     ngf_cmd_end_pass(uibuf);
-    ngf_cmd_buffer_end(uibuf);
-    ngf_cmd_buffer_submit(1u, &uibuf);
+    ngf_end_cmd_buffer(uibuf);
+    ngf_submit_cmd_buffer(1u, &uibuf);
 
     // End frame.
     ngf_end_frame(init_data.context);

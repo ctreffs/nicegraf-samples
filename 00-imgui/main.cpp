@@ -88,13 +88,14 @@ init_result on_initialized(uintptr_t native_handle,
 void on_frame(uint32_t w, uint32_t h, void *userdata) {
   app_state *state = (app_state*)userdata;
   ngf_cmd_buffer *cmd_buf = nullptr;
-  ngf_cmd_buffer_create(&cmd_buf);
-  ngf_cmd_buffer_start(cmd_buf);
+  ngf_cmd_buffer_info cmd_info;
+  ngf_create_cmd_buffer(&cmd_info, &cmd_buf);
+  ngf_start_cmd_buffer(cmd_buf);
   ngf_cmd_begin_pass(cmd_buf, state->clear_pass, state->default_rt);
   ngf_cmd_end_pass(cmd_buf);
-  ngf_cmd_buffer_end(cmd_buf);
-  ngf_cmd_buffer_submit(1u, &cmd_buf);
-  ngf_cmd_buffer_destroy(cmd_buf);
+  ngf_end_cmd_buffer(cmd_buf);
+  ngf_submit_cmd_buffer(1u, &cmd_buf);
+  ngf_destroy_cmd_buffer(cmd_buf);
 }
 
 // Called every time the application has to dra an ImGUI overlay.
