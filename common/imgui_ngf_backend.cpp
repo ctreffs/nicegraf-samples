@@ -182,8 +182,10 @@ void ngf_imgui::record_rendering_commands(ngf_cmd_buffer *cmdbuf) {
 
   // These vectors will store vertex and index data for the draw calls.
   // Later this data will be transferred to GPU buffers.
-  std::vector<ImDrawVert> vertex_data(data->TotalVtxCount, ImDrawVert());
-  std::vector<ImDrawIdx> index_data(data->TotalIdxCount, 0u);
+  std::vector<ImDrawVert> vertex_data((size_t)data->TotalVtxCount,
+                                      ImDrawVert());
+  std::vector<ImDrawIdx> index_data((size_t)data->TotalIdxCount,
+                                    0u);
   uint32_t last_vertex = 0u;
   uint32_t last_index = 0u;
 
@@ -216,15 +218,16 @@ void ngf_imgui::record_rendering_commands(ngf_cmd_buffer *cmdbuf) {
     const ImDrawList *imgui_cmd_list = data->CmdLists[i];
     memcpy(&vertex_data[last_vertex],
            imgui_cmd_list->VtxBuffer.Data,
-           sizeof(ImDrawVert) * imgui_cmd_list->VtxBuffer.Size);
+           sizeof(ImDrawVert) * (size_t)imgui_cmd_list->VtxBuffer.Size);
 
     // Append index data.
     for (int a = 0u; a < imgui_cmd_list->IdxBuffer.Size; ++a) {
       // ImGui uses separate index buffers, but we'll use just one. We will
       // update the index values accordingly.
-      index_data[last_index + a] = last_vertex + imgui_cmd_list->IdxBuffer[a];
+      index_data[last_index + (size_t)a] =
+          (ImDrawIdx)(last_vertex + imgui_cmd_list->IdxBuffer[a]);
     }
-    last_vertex += imgui_cmd_list->VtxBuffer.Size;
+    last_vertex += (uint32_t)imgui_cmd_list->VtxBuffer.Size;
     
     // Process each ImGui command in the draw list.
     uint32_t idx_buffer_sub_offset = 0u;
@@ -253,7 +256,7 @@ void ngf_imgui::record_rendering_commands(ngf_cmd_buffer *cmdbuf) {
         }
       }
     }
-    last_index += imgui_cmd_list->IdxBuffer.Size;
+    last_index += (uint32_t)imgui_cmd_list->IdxBuffer.Size;
   }
 
   // Fill vertex and index buffers with data.
