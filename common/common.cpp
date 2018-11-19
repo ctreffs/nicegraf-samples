@@ -113,7 +113,7 @@ int main(int argc, char **argv) {
     glfwGetFramebufferSize(win, &win_size_x, &win_size_y);
 
     // Notify application.
-    on_frame(win_size_x, win_size_y, init_data.userdata);
+    on_frame((uint32_t)win_size_x, (uint32_t)win_size_y, init_data.userdata);
 
     // Give application a chance to submit its UI drawing commands.
     // TODO: make toggleable.
