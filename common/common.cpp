@@ -86,25 +86,19 @@ int main(int, char **) {
   ImGui_ImplGlfw_InitForOpenGL(win, true);
 
   ngf_imgui ui; // State of the ngf ImGUI backend.
-
-  // Create a render pass for rendering the UI.
-  ngf_attachment_load_op ui_layer_load_op = NGF_LOAD_OP_KEEP;
-  ngf_pass_info ui_pass_info {
-    &ui_layer_load_op,
-    0u,
-    nullptr
-  };
-  ngf::pass ui_pass;
-  ui_pass.initialize(ui_pass_info);
  
   // Create a command buffer the UI rendering commands.
-  ngf_cmd_buffer *uibuf = nullptr;
-  ngf_cmd_buffer_info uibuf_info;
-  ngf_create_cmd_buffer(&uibuf_info, &uibuf);
+  ngf::cmd_buffer uibuf;
+  ngf_cmd_buffer_info uibuf_info {0u};
+  uibuf.initialize(uibuf_info);
 
   // Obtain the default render target.
   ngf_render_target *defaultrt = nullptr;
-  ngf_default_render_target(&defaultrt);
+  ngf_default_render_target(NGF_LOAD_OP_KEEP,
+                            NGF_LOAD_OP_DONTCARE,
+                            NULL,
+                            NULL,
+                            &defaultrt);
 
   while (!glfwWindowShouldClose(win)) { // Main loop.
     glfwPollEvents(); // Get input events.
@@ -129,15 +123,17 @@ int main(int, char **) {
 
     // Draw the UI.
     ngf_start_cmd_buffer(uibuf);
-    ngf_cmd_begin_pass(uibuf, ui_pass, defaultrt);
+    ngf_cmd_begin_pass(uibuf, defaultrt);
     ui.record_rendering_commands(uibuf);
     ngf_cmd_end_pass(uibuf);
     ngf_end_cmd_buffer(uibuf);
-    ngf_submit_cmd_buffer(1u, &uibuf);
+    ngf_cmd_buffer *b = uibuf.get();
+    ngf_submit_cmd_buffer(1u, &b);
 
     // End frame.
     ngf_end_frame(init_data.context);
   }
+  ngf_destroy_render_target(defaultrt);
   on_shutdown(init_data.userdata);
   glfwTerminate();
   return 0;
