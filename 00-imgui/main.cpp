@@ -25,8 +25,8 @@ SOFTWARE.
 #include <stdint.h>
 
 struct app_state {
-  ngf::pass clear_pass;
-  ngf_render_target *default_rt;
+  ngf::render_target default_rt;
+  ngf::cmd_buffer cmd_buf;
 };
 
 // Called upon application initialization.
@@ -39,6 +39,11 @@ init_result on_initialized(uintptr_t native_handle,
   assert(err == NGF_ERROR_OK);
 
   // Create a nicegraf context.
+  ngf_clear clear;
+  clear.clear_color[0] = 0.6f;
+  clear.clear_color[1] = 0.7f;
+  clear.clear_color[2] = 0.8f;
+  clear.clear_color[3] = 1.0f;
   ngf_swapchain_info swapchain_info = {
     NGF_IMAGE_FORMAT_BGRA8, // color format
     NGF_IMAGE_FORMAT_UNDEFINED, // depth format (none)
@@ -63,22 +68,17 @@ init_result on_initialized(uintptr_t native_handle,
   assert(err == NGF_ERROR_OK);
 
   // Obtain the default render target.
-  ngf_default_render_target(&state->default_rt);
+  ngf_render_target *rt;
+  ngf_default_render_target(NGF_LOAD_OP_CLEAR,
+                            NGF_LOAD_OP_DONTCARE,
+                            &clear,
+                            NULL,
+                            &rt);
+  state->default_rt = ngf::render_target(rt);
 
-  // Set up a render pass.
-  ngf_attachment_load_op pass_load_op = NGF_LOAD_OP_CLEAR;
-  ngf_clear_info clear_info;
-  clear_info.clear_color[0] = 0.6f;
-  clear_info.clear_color[1] = 0.7f;
-  clear_info.clear_color[2] = 0.8f;
-  clear_info.clear_color[3] = 1.0f;
-  ngf_pass_info pass_info {
-    &pass_load_op,
-    1u,
-    &clear_info
-  };
-  err = state->clear_pass.initialize(pass_info);
-  
+  // Create a command buffer.
+  ngf_cmd_buffer_info cmd_buf_info {0u};
+  err = state->cmd_buf.initialize(cmd_buf_info);
   assert(err == NGF_ERROR_OK);
 
   return { std::move(nicegraf_context), state};
@@ -87,15 +87,13 @@ init_result on_initialized(uintptr_t native_handle,
 // Called every frame.
 void on_frame(uint32_t, uint32_t, void *userdata) {
   app_state *state = (app_state*)userdata;
-  ngf_cmd_buffer *cmd_buf = nullptr;
-  ngf_cmd_buffer_info cmd_info;
-  ngf_create_cmd_buffer(&cmd_info, &cmd_buf);
+  ngf::cmd_buffer &cmd_buf = state->cmd_buf;
   ngf_start_cmd_buffer(cmd_buf);
-  ngf_cmd_begin_pass(cmd_buf, state->clear_pass, state->default_rt);
+  ngf_cmd_begin_pass(cmd_buf, state->default_rt);
   ngf_cmd_end_pass(cmd_buf);
   ngf_end_cmd_buffer(cmd_buf);
-  ngf_submit_cmd_buffer(1u, &cmd_buf);
-  ngf_destroy_cmd_buffer(cmd_buf);
+  ngf_cmd_buffer *b = cmd_buf.get();
+  ngf_submit_cmd_buffer(1u, &b);
 }
 
 // Called every time the application has to dra an ImGUI overlay.
