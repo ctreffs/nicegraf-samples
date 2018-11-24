@@ -101,3 +101,4 @@ endfunction(add_sample)
 
 add_sample("00-imgui")
 add_sample("01-full-screen-triangle")
+add_sample("02-spec-consts")
