@@ -39,9 +39,6 @@ init_result on_initialized(uintptr_t native_handle,
                            uint32_t initial_height) {
   app_state *state = new app_state;
 
-  ngf_error err = ngf_initialize(NGF_DEVICE_PREFERENCE_DONTCARE);
-  assert(err == NGF_ERROR_OK);
-
   // Create a nicegraf context.
   ngf_swapchain_info swapchain_info = {
     NGF_IMAGE_FORMAT_BGRA8, // color format
@@ -59,7 +56,7 @@ init_result on_initialized(uintptr_t native_handle,
     true     // debug
   };
   ngf::context nicegraf_context;
-  err = nicegraf_context.initialize(ctx_info);
+  ngf_error err = nicegraf_context.initialize(ctx_info);
   assert(err == NGF_ERROR_OK);
 
   // Set the newly created context as current.
