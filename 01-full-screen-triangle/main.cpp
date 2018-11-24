@@ -24,6 +24,7 @@ SOFTWARE.
 #include <imgui.h>
 #include <assert.h>
 #include <stdint.h>
+#include <stdio.h>
 
 struct app_state {
   ngf::render_target default_rt;
@@ -100,14 +101,17 @@ init_result on_initialized(uintptr_t native_handle,
 }
 
 // Called every frame.
-void on_frame(uint32_t, uint32_t, void *userdata) {
+void on_frame(uint32_t w, uint32_t h, void *userdata) {
   app_state *state = (app_state*)userdata;
+  ngf_irect2d viewport { 0, 0, w, h };
   ngf_cmd_buffer *cmd_buf = nullptr;
   ngf_cmd_buffer_info cmd_info;
   ngf_create_cmd_buffer(&cmd_info, &cmd_buf);
   ngf_start_cmd_buffer(cmd_buf);
   ngf_cmd_begin_pass(cmd_buf, state->default_rt);
   ngf_cmd_bind_pipeline(cmd_buf, state->pipeline);
+  ngf_cmd_viewport(cmd_buf, &viewport);
+  ngf_cmd_scissor(cmd_buf, &viewport);
   ngf_cmd_draw(cmd_buf, false, 0u, 3u, 1u); 
   ngf_cmd_end_pass(cmd_buf);
   ngf_end_cmd_buffer(cmd_buf);
