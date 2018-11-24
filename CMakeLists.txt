@@ -58,8 +58,11 @@ set(NGF_SAMPLES_COMMON_SOURCES
   ${CMAKE_CURRENT_LIST_DIR}/common/imgui_ngf_backend.cpp)
 
 if(APPLE)
+  add_definitions(-DNGF_BACKEND_METAL)
   set(NGF_SAMPLES_COMMON_SOURCES ${NGF_SAMPLES_COMMON_SOURCES}
       ${CMAKE_CURRENT_LIST_DIR}/common/get_glfw_contentview.mm)
+else()
+  add_definitions(-DNGF_BACKEND_OPENGL)
 endif()
 
 add_library(common
