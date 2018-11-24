@@ -1,0 +1,19 @@
+#include <metal_stdlib>
+using namespace metal;
+
+struct Outputs {
+  float4 pos [[position]];
+  float4 color;
+};
+
+vertex Outputs main0(uint v_id[[vertex_id]]) {
+  const float4 vertices[] = {
+    float4(-1.0, -1.0, 0.0, 1.0),
+    float4( 3.0, -1.0, 0.0, 1.0),
+    float4(-1.0,  3.0, 0.0, 1.0)
+  };
+  Outputs o;
+  o.pos = vertices[v_id % 3];
+  o.color = o.pos;
+  return o;
+}

@@ -73,9 +73,11 @@ int main(int, char **) {
 #endif
 
   // Initialize ImGUI.
-  ImGui::SetCurrentContext(ImGui::CreateContext());
+  //ImGui::SetCurrentContext(ImGui::CreateContext());
 
   // Style the controls.
+  /*
+
   ImGui::StyleColorsLight();
   ImGuiStyle &gui_style = ImGui::GetStyle();
   gui_style.WindowRounding = 0.0f;
@@ -85,9 +87,9 @@ int main(int, char **) {
   gui_style.WindowTitleAlign.x = 0.5f;
 
   ImGui_ImplGlfw_InitForOpenGL(win, true);
+*/
+  //ngf_imgui ui; // State of the ngf ImGUI backend.
 
-  ngf_imgui ui; // State of the ngf ImGUI backend.
- 
   // Create a command buffer the UI rendering commands.
   ngf::cmd_buffer uibuf;
   ngf_cmd_buffer_info uibuf_info {0u};
@@ -115,17 +117,17 @@ int main(int, char **) {
 
     // Give application a chance to submit its UI drawing commands.
     // TODO: make toggleable.
-    ImGui::GetIO().DisplaySize.x = (float)win_size_x;
-    ImGui::GetIO().DisplaySize.y = (float)win_size_y;
-    ImGui::NewFrame();
-    ImGui_ImplGlfw_NewFrame();
+    //ImGui::GetIO().DisplaySize.x = (float)win_size_x;
+    //ImGui::GetIO().DisplaySize.y = (float)win_size_y;
+    //ImGui::NewFrame();
+    //ImGui_ImplGlfw_NewFrame();
     on_ui(init_data.userdata);
     // TODO: draw debug console window.
 
     // Draw the UI.
     ngf_start_cmd_buffer(uibuf);
     ngf_cmd_begin_pass(uibuf, defaultrt);
-    ui.record_rendering_commands(uibuf);
+    //ui.record_rendering_commands(uibuf);
     ngf_cmd_end_pass(uibuf);
     ngf_end_cmd_buffer(uibuf);
     ngf_cmd_buffer *b = uibuf.get();
@@ -140,13 +142,22 @@ int main(int, char **) {
   return 0;
 }
 
+#if defined(NGF_BACKEND_OPENGL)
+#define SHADER_EXTENSION ".glsl"
+#elif defined(NGF_BACKEND_VULKAN)
+#define SHADER_EXTENSION ".spv"
+#else
+#define SHADER_EXTENSION ".msl"
+#endif
+
 ngf::shader_stage load_shader_stage(const char *root_name,
                                     ngf_stage_type type) {
   static const char *stage_names[] = {
     "vert", "tesc", "tese", "geom", "frag"
   };
   std::string file_name =
-      "shaders/" + std::string(root_name) + "." + stage_names[type] + ".glsl";
+      "shaders/" + std::string(root_name) + "." + stage_names[type] +
+       SHADER_EXTENSION;
   std::ifstream fs(file_name);
   std::vector<char> content((std::istreambuf_iterator<char>(fs)),
                        std::istreambuf_iterator<char>());
