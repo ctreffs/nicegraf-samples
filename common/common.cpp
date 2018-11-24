@@ -53,7 +53,11 @@ void on_shutdown(void *userdata);
 int main(int, char **) {
   // Initialize GLFW.
   glfwInit();
-  
+ 
+  // Initialize nicegraf.
+  ngf_error err = ngf_initialize(NGF_DEVICE_PREFERENCE_DONTCARE);
+  assert(err == NGF_ERROR_OK);
+
   // Tell GLFW not to attempt to create an API context (nicegraf does it for
   // us).
   glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
@@ -66,11 +70,6 @@ int main(int, char **) {
   // Notify the app.
   init_result init_data = on_initialized(
       reinterpret_cast<uintptr_t>(GET_GLFW_NATIVE_HANDLE(win)), 1024, 768);
-
-#if !defined(NDEBUG)
-  // Install debug message callback in debug mode only.
-  ngf_debug_message_callback(nullptr, debugmsg_cb);
-#endif
 
   // Initialize ImGUI.
   //ImGui::SetCurrentContext(ImGui::CreateContext());
@@ -171,4 +170,41 @@ ngf::shader_stage load_shader_stage(const char *root_name,
   ngf_error err = stage.initialize(stage_info);
   assert(err == NGF_ERROR_OK);
   return stage;
+}
+
+ngf::context create_default_context(uintptr_t handle, uint32_t w, uint32_t h) {
+  // Create a nicegraf context.
+  ngf_swapchain_info swapchain_info = {
+    NGF_IMAGE_FORMAT_BGRA8, // color format
+    NGF_IMAGE_FORMAT_UNDEFINED, // depth format (none)
+    0, // number of MSAA samples (0, non-multisampled)
+    2u, // swapchain capacity hint
+    w, // swapchain image width
+    h, // swapchain image height
+    handle,
+    NGF_PRESENTATION_MODE_FIFO, // turn off vsync
+  };
+  ngf_context_info ctx_info = {
+    &swapchain_info, // swapchain_info
+    nullptr, // shared_context (nullptr, no shared context)
+#if !defined(NDEBUG)
+    true     // debug
+#else
+    false
+#endif
+  };
+  ngf::context nicegraf_context;
+  ngf_error err = nicegraf_context.initialize(ctx_info);
+  assert(err == NGF_ERROR_OK);
+
+  // Set the newly created context as current.
+  err = ngf_set_context(nicegraf_context);
+  assert(err == NGF_ERROR_OK);
+
+#if !defined(NDEBUG)
+  // Install debug message callback in debug mode only.
+  ngf_debug_message_callback(nullptr, debugmsg_cb);
+#endif
+
+  return std::move(nicegraf_context);
 }

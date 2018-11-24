@@ -22,6 +22,9 @@ SOFTWARE.
 
 ngf::shader_stage load_shader_stage(const char *root_name,
                                     ngf_stage_type type);
+
+ngf::context create_default_context(uintptr_t handle, uint32_t w, uint32_t h);
+
 struct init_result {
   ngf::context context;
   void *userdata;
