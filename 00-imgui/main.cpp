@@ -35,9 +35,6 @@ init_result on_initialized(uintptr_t native_handle,
                            uint32_t initial_height) {
   app_state *state = new app_state;
 
-  ngf_error err = ngf_initialize(NGF_DEVICE_PREFERENCE_DONTCARE);
-  assert(err == NGF_ERROR_OK);
-
   // Create a nicegraf context.
   ngf_clear clear;
   clear.clear_color[0] = 0.6f;
