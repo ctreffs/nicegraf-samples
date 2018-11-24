@@ -177,7 +177,7 @@ ngf::context create_default_context(uintptr_t handle, uint32_t w, uint32_t h) {
   ngf_swapchain_info swapchain_info = {
     NGF_IMAGE_FORMAT_BGRA8, // color format
     NGF_IMAGE_FORMAT_UNDEFINED, // depth format (none)
-    0, // number of MSAA samples (0, non-multisampled)
+    8u, // MSAA 8x
     2u, // swapchain capacity hint
     w, // swapchain image width
     h, // swapchain image height
