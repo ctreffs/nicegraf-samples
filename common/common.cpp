@@ -206,5 +206,5 @@ ngf::context create_default_context(uintptr_t handle, uint32_t w, uint32_t h) {
   ngf_debug_message_callback(nullptr, debugmsg_cb);
 #endif
 
-  return std::move(nicegraf_context);
+  return nicegraf_context;
 }
