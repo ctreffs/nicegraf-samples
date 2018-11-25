@@ -67,14 +67,7 @@ init_result on_initialized(uintptr_t native_handle,
   ngf_util_create_default_graphics_pipeline_data(nullptr,
                                                  &pipeline_data);
   ngf_graphics_pipeline_info &pipe_info = pipeline_data.pipeline_info;
-
-  // Configure the first (non-specialized) pipeline.
-  pipe_info.nshader_stages = 2u;
-  pipe_info.shader_stages[0] = state->vert_stage.get();
-  pipe_info.shader_stages[1] = state->frag_stage.get();
-  err = state->pipelines[0].initialize(pipe_info);
-  assert(err == NGF_ERROR_OK);
-
+  
   // Construct the specialization entries.
   ngf_specialization_info spec_info;
   spec_info.nspecializations = 2u;
@@ -82,13 +75,22 @@ init_result on_initialized(uintptr_t native_handle,
     {0u /*constant_id*/, 0u /*offset*/, NGF_TYPE_FLOAT /*type*/},
     {1u /*constant_id*/, sizeof(float) /*offset*/, NGF_TYPE_FLOAT /*type*/},
   };
-  float spec_data[2] = {0.5f, 0.7f};
+  float spec_data[2] = {1.0f, 1.0f};
   spec_info.specializations = specs;
   spec_info.value_buffer = spec_data;
-  
-  // Configure the second pipeline (with specialization).
   pipe_info.spec_info = &spec_info;
-    err = state->pipelines[1].initialize(pipe_info);
+  
+  // Configure the first pipeline.
+  pipe_info.nshader_stages = 2u;
+  pipe_info.shader_stages[0] = state->vert_stage.get();
+  pipe_info.shader_stages[1] = state->frag_stage.get();
+  err = state->pipelines[0].initialize(pipe_info);
+  assert(err == NGF_ERROR_OK);
+
+  // Configure the second pipeline.
+  spec_data[0] = 0.5f;
+  spec_data[1] = 0.7f;
+  err = state->pipelines[1].initialize(pipe_info);
   assert(err == NGF_ERROR_OK);
 
   return { std::move(ctx), state};

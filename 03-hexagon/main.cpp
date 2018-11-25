@@ -25,6 +25,7 @@ SOFTWARE.
 #include <assert.h>
 #include <stdint.h>
 #include <stdio.h>
+#include <math.h>
 
 /** 
     These samples do not use PI on principle.
@@ -101,6 +102,7 @@ init_result on_initialized(uintptr_t native_handle,
   binding.input_rate = NGF_INPUT_RATE_VERTEX;
   binding.stride = sizeof(vertex_data);
   vert_info.vert_buf_bindings = &binding;
+  
   // Enable multisampling for anti-aliasing.
   pipeline_data.multisample_info.multisample = true;
   // Done configuring, initialize the pipeline.
@@ -147,8 +149,6 @@ init_result on_initialized(uintptr_t native_handle,
 
 // Called every frame.
 void on_frame(uint32_t w, uint32_t h, void *userdata) {
-  static uint32_t frame = 1u;
-  static uint32_t pipe = 0u;
   app_state *state = (app_state*)userdata;
   ngf_irect2d viewport { 0, 0, w, h };
   ngf_cmd_buffer *cmd_buf = nullptr;
