@@ -57,7 +57,7 @@ init_result on_initialized(uintptr_t native_handle,
     true     // debug
   };
   ngf::context nicegraf_context;
-  err = nicegraf_context.initialize(ctx_info);
+  ngf_error err = nicegraf_context.initialize(ctx_info);
   assert(err == NGF_ERROR_OK);
 
   // Set the newly created context as current.
