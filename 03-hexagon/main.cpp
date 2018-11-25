@@ -101,8 +101,6 @@ init_result on_initialized(uintptr_t native_handle,
   binding.input_rate = NGF_INPUT_RATE_VERTEX;
   binding.stride = sizeof(vertex_data);
   vert_info.vert_buf_bindings = &binding;
-  // We'll draw a hexagon using a triangle fan.
-  pipe_info.primitive_type = NGF_PRIMITIVE_TYPE_TRIANGLE_FAN;
   // Enable multisampling for anti-aliasing.
   pipeline_data.multisample_info.multisample = true;
   // Done configuring, initialize the pipeline.
@@ -120,20 +118,27 @@ init_result on_initialized(uintptr_t native_handle,
   assert(err == NGF_ERROR_OK);
 
   // Populate vertex buffer with data.
-  vertex_data vertices[8] = {
+  vertex_data vertices[3u * 6u] = {
       {  // First vertex is the center of the hexagon.
           {0.0f, 0.0f},
           {1.0f, 1.0f, 1.0f}
       }
   };
-  for (uint32_t v = 1u; v < 7u; ++v) {
-    vertices[v].position[0] = 0.5f * (float)cos((v - 1u) * TAU / 6.0);
-    vertices[v].position[1] = 0.5f * (float)sin((v - 1u) * TAU / 6.0);
-    vertices[v].color[0] = vertices[v].position[0];
-    vertices[v].color[1] = vertices[v].position[1];
-    vertices[v].color[2] = 1.0f - vertices[v].position[1];
+  for (uint32_t t = 0u; t < 6u; ++t) {
+    for (uint32_t v = 0u; v < 3u; ++v) {
+      vertex_data &vertex = vertices[3u * t + v];
+      if (v == 0) {
+        memcpy(vertex.position, vertices[0].position, sizeof(float) * 2u);
+      } else {
+        uint32_t i = v - 1u;
+        vertex.position[0] = 0.5f * (float)cos((t + i) * TAU / 6.0f);
+        vertex.position[1] = 0.5f * (float)sin((t + i) * TAU / 6.0f);
+      }
+      vertex.color[0] = 0.5f*(vertex.position[0] + 1.0f);
+      vertex.color[1] = 0.5f*(vertex.position[1] + 1.0f);
+      vertex.color[2] = 1.0f - vertex.position[0];
+    }
   }
-  vertices[7] = vertices[1]; // close the loop
   ngf_populate_buffer(state->vert_buffer.get(),
                       0u, sizeof(vertices), vertices);
 
@@ -155,7 +160,7 @@ void on_frame(uint32_t w, uint32_t h, void *userdata) {
   ngf_cmd_bind_vertex_buffer(cmd_buf, state->vert_buffer, 0u, 0u);
   ngf_cmd_viewport(cmd_buf, &viewport);
   ngf_cmd_scissor(cmd_buf, &viewport);
-  ngf_cmd_draw(cmd_buf, false, 0u, 8u, 1u); 
+  ngf_cmd_draw(cmd_buf, false, 0u, 3u * 6u, 1u); 
   ngf_cmd_end_pass(cmd_buf);
   ngf_end_cmd_buffer(cmd_buf);
   ngf_submit_cmd_buffer(1u, &cmd_buf);
