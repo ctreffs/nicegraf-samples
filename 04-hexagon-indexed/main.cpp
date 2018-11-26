@@ -38,8 +38,8 @@ struct app_state {
   ngf::shader_stage vert_stage;
   ngf::shader_stage frag_stage;
   ngf::graphics_pipeline pipeline;
-  ngf::buffer vert_buffer;
-  ngf::buffer index_buffer;
+  ngf::attrib_buffer vert_buffer;
+  ngf::index_buffer index_buffer;
 };
 
 struct vertex_data {
@@ -109,22 +109,6 @@ init_result on_initialized(uintptr_t native_handle,
   err = state->pipeline.initialize(pipe_info);
   assert(err == NGF_ERROR_OK);
 
-  // Create the vertex data buffer.
-  ngf_buffer_info buf_info {
-    7u * sizeof(vertex_data),
-    NGF_BUFFER_TYPE_VERTEX,
-    NGF_BUFFER_USAGE_STATIC,
-    NGF_BUFFER_ACCESS_DRAW
-  };
-  err = state->vert_buffer.initialize(buf_info);
-  assert(err == NGF_ERROR_OK);
-
-  // Create index data buffer.
-  buf_info.size = 3u * 6u * sizeof(uint16_t);
-  buf_info.type = NGF_BUFFER_TYPE_INDEX;
-  err = state->index_buffer.initialize(buf_info);
-  assert(err == NGF_ERROR_OK);
-
   // Populate vertex buffer with data.
   vertex_data vertices[7u] = {
       {  // First vertex is the center of the hexagon.
@@ -140,8 +124,15 @@ init_result on_initialized(uintptr_t native_handle,
     vertex.color[1] = 0.5f*(vertex.position[1] + 1.0f);
     vertex.color[2] = 1.0f - vertex.position[0];
   }
-  ngf_populate_buffer(state->vert_buffer.get(),
-                      0u, sizeof(vertices), vertices);
+  // Create the vertex data buffer.
+  ngf_attrib_buffer_info buf_info {
+    sizeof(vertices),
+    vertices,
+    NULL, NULL,
+    NGF_VERTEX_DATA_USAGE_STATIC
+  };
+  err = state->vert_buffer.initialize(buf_info);
+  assert(err == NGF_ERROR_OK);
 
   // Populate index buffer with data.
   uint16_t indices[3u * 6u];
@@ -150,7 +141,15 @@ init_result on_initialized(uintptr_t native_handle,
     indices[3u*t + 1u] = (t + 1u) % 7u;
     indices[3u*t + 2u] = (t + 2u >= 7u) ? 1u : (t + 2u);
   }
-  ngf_populate_buffer(state->index_buffer.get(), 0u, sizeof(indices), indices);
+  // Create index data buffer.
+  ngf_index_buffer_info idx_buf_info {
+    sizeof(indices),
+    indices,
+    NULL, NULL,
+    NGF_VERTEX_DATA_USAGE_STATIC
+  };
+  err = state->index_buffer.initialize(idx_buf_info);
+  assert(err == NGF_ERROR_OK);
 
   return { std::move(ctx), state};
 }
@@ -165,7 +164,7 @@ void on_frame(uint32_t w, uint32_t h, void *userdata) {
   ngf_start_cmd_buffer(cmd_buf);
   ngf_cmd_begin_pass(cmd_buf, state->default_rt);
   ngf_cmd_bind_pipeline(cmd_buf, state->pipeline);
-  ngf_cmd_bind_vertex_buffer(cmd_buf, state->vert_buffer, 0u, 0u);
+  ngf_cmd_bind_attrib_buffer(cmd_buf, state->vert_buffer, 0u, 0u);
   ngf_cmd_bind_index_buffer(cmd_buf, state->index_buffer, NGF_TYPE_UINT16);
   ngf_cmd_viewport(cmd_buf, &viewport);
   ngf_cmd_scissor(cmd_buf, &viewport);

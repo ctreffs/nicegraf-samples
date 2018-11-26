@@ -16,12 +16,12 @@ public:
 
 private:
   ngf::graphics_pipeline pipeline_;
-  ngf::buffer projmtx_ubo_;
+  ngf::uniform_buffer projmtx_ubo_;
   ngf::image font_texture_;
   ngf::descriptor_set desc_set_;
   ngf::sampler tex_sampler_;
-  ngf::buffer vertex_buffer_;
-  ngf::buffer index_buffer_;
+  ngf::attrib_buffer attrib_buffer_;
+  ngf::index_buffer index_buffer_;
   ngf::shader_stage vertex_stage_;
   ngf::shader_stage fragment_stage_;
 };

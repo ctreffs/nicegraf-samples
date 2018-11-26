@@ -85,11 +85,8 @@ ngf_imgui::ngf_imgui() {
   ImGui::GetIO().Fonts->TexID = (ImTextureID)(uintptr_t)font_texture_.get();
 
   // Allocate UBO for projection matrix.
-  ngf_buffer_info projmtx_ubo_info = {
-    sizeof(float) * 16u,
-    NGF_BUFFER_TYPE_UNIFORM,
-    NGF_BUFFER_USAGE_STATIC,
-    NGF_BUFFER_ACCESS_DRAW
+  ngf_uniform_buffer_info projmtx_ubo_info = {
+    sizeof(float) * 16u
   };
   err = projmtx_ubo_.initialize(projmtx_ubo_info);
   assert(err == NGF_ERROR_OK);
@@ -177,8 +174,10 @@ void ngf_imgui::record_rendering_commands(ngf_cmd_buffer *cmdbuf) {
       { 0.0f,         0.0f,        -1.0f,   0.0f },
       { (R+L)/(L-R),  (T+B)/(B-T),  0.0f,   1.0f },
   };
-  ngf_populate_buffer(projmtx_ubo_, 0u, sizeof(ortho_projection),
-                      ortho_projection);
+  ngf_error err =
+    ngf_write_uniform_buffer(projmtx_ubo_.get(),
+                             ortho_projection, sizeof(ortho_projection));
+  assert(err == NGF_ERROR_OK);
 
   // These vectors will store vertex and index data for the draw calls.
   // Later this data will be transferred to GPU buffers.
@@ -186,30 +185,15 @@ void ngf_imgui::record_rendering_commands(ngf_cmd_buffer *cmdbuf) {
                                       ImDrawVert());
   std::vector<ImDrawIdx> index_data((size_t)data->TotalIdxCount,
                                     0u);
+  struct draw_data {
+    ngf_irect2d scissor;
+    uint32_t first_elem;
+    uint32_t nelem;
+  };
+  std::vector<draw_data> draw_data;
+
   uint32_t last_vertex = 0u;
   uint32_t last_index = 0u;
-
-  // Create new vertex and index buffers.
-  ngf_buffer_info vertex_buffer_info{
-    sizeof(ImDrawVert) * vertex_data.size(),
-    NGF_BUFFER_TYPE_VERTEX,
-    NGF_BUFFER_USAGE_STREAM,
-    NGF_BUFFER_ACCESS_DRAW
-  };
-  vertex_buffer_.initialize(vertex_buffer_info);
-  ngf_buffer_info index_buffer_info{
-    sizeof(ImDrawIdx) * index_data.size(),
-    NGF_BUFFER_TYPE_INDEX,
-    NGF_BUFFER_USAGE_STREAM,
-    NGF_BUFFER_ACCESS_DRAW
-  };
-  index_buffer_.initialize(index_buffer_info);
-
-  // Bind vertex and index buffers.
-  ngf_cmd_bind_index_buffer(cmdbuf, index_buffer_,
-                            sizeof(ImDrawIdx) < 4
-                                ? NGF_TYPE_UINT16 : NGF_TYPE_UINT32);
-  ngf_cmd_bind_vertex_buffer(cmdbuf, vertex_buffer_, 0u, 0u);
 
   // Process each ImGui command list and translate it into the nicegraf
   // command buffer.
@@ -249,9 +233,9 @@ void ngf_imgui::record_rendering_commands(ngf_cmd_buffer *cmdbuf) {
             (uint32_t)(clip_rect.z - clip_rect.x),
             (uint32_t)(clip_rect.w - clip_rect.y)
           };
-          ngf_cmd_scissor(cmdbuf, &scissor_rect);
-          ngf_cmd_draw(cmdbuf, true, last_index + idx_buffer_sub_offset,
-                       (uint32_t)cmd.ElemCount, 1u);
+          draw_data.push_back(
+            {scissor_rect, last_index + idx_buffer_sub_offset,
+             (uint32_t)cmd.ElemCount});
           idx_buffer_sub_offset += (uint32_t)cmd.ElemCount;
         }
       }
@@ -259,11 +243,32 @@ void ngf_imgui::record_rendering_commands(ngf_cmd_buffer *cmdbuf) {
     last_index += (uint32_t)imgui_cmd_list->IdxBuffer.Size;
   }
 
-  // Fill vertex and index buffers with data.
-  ngf_populate_buffer(vertex_buffer_, 0u,
-                      vertex_data.size() * sizeof(ImDrawVert),
-                      vertex_data.data());
-  ngf_populate_buffer(index_buffer_, 0u,
-                      index_data.size() * sizeof(ImDrawIdx),
-                      index_data.data());
+  // Create new vertex and index buffers.
+  ngf_attrib_buffer_info attrib_buffer_info{
+    sizeof(ImDrawVert) * vertex_data.size(), // data size
+    vertex_data.data(),
+    NULL,
+    NULL,
+    NGF_VERTEX_DATA_USAGE_TRANSIENT
+  };
+  attrib_buffer_.initialize(attrib_buffer_info);
+
+  ngf_index_buffer_info index_buffer_info{
+    sizeof(ImDrawIdx) * index_data.size(),
+    index_data.data(),
+    NULL,
+    NULL,
+    NGF_VERTEX_DATA_USAGE_TRANSIENT
+  };
+  index_buffer_.initialize(index_buffer_info);
+
+  // Record commands into the cmd buffer.
+  ngf_cmd_bind_index_buffer(cmdbuf, index_buffer_,
+                            sizeof(ImDrawIdx) < 4
+                                ? NGF_TYPE_UINT16 : NGF_TYPE_UINT32);
+  ngf_cmd_bind_attrib_buffer(cmdbuf, attrib_buffer_, 0u, 0u);
+  for (const auto &draw : draw_data) {
+    ngf_cmd_scissor(cmdbuf, &draw.scissor);
+    ngf_cmd_draw(cmdbuf, true, draw.first_elem, draw.nelem, 1u);
+  }
 }
