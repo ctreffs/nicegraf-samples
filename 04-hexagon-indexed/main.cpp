@@ -155,7 +155,7 @@ init_result on_initialized(uintptr_t native_handle,
 }
 
 // Called every frame.
-void on_frame(uint32_t w, uint32_t h, void *userdata) {
+void on_frame(uint32_t w, uint32_t h, float, void *userdata) {
   app_state *state = (app_state*)userdata;
   ngf_irect2d viewport { 0, 0, w, h };
   ngf_cmd_buffer *cmd_buf = nullptr;

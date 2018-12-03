@@ -45,7 +45,7 @@ void debugmsg_cb(const char *msg, const void*) {
 }
 
 init_result on_initialized(uintptr_t handle, uint32_t w, uint32_t h);
-void on_frame(uint32_t w, uint32_t h, void *userdata);
+void on_frame(uint32_t w, uint32_t h, float time, void *userdata);
 void on_ui(void *userdata);
 void on_shutdown(void *userdata);
 
@@ -74,10 +74,9 @@ int main(int, char **) {
       reinterpret_cast<uintptr_t>(GET_GLFW_NATIVE_HANDLE(win)), (uint32_t)w, (uint32_t)h);
 
   // Initialize ImGUI.
-  //ImGui::SetCurrentContext(ImGui::CreateContext());
+  ImGui::SetCurrentContext(ImGui::CreateContext());
 
   // Style the controls.
-  /*
 
   ImGui::StyleColorsLight();
   ImGuiStyle &gui_style = ImGui::GetStyle();
@@ -88,8 +87,8 @@ int main(int, char **) {
   gui_style.WindowTitleAlign.x = 0.5f;
 
   ImGui_ImplGlfw_InitForOpenGL(win, true);
-*/
-  //ngf_imgui ui; // State of the ngf ImGUI backend.
+
+  ngf_imgui ui; // State of the ngf ImGUI backend.
 
   // Create a command buffer the UI rendering commands.
   ngf::cmd_buffer uibuf;
@@ -112,29 +111,32 @@ int main(int, char **) {
     glfwGetFramebufferSize(win, &new_win_width, &new_win_height);
     if (new_win_width != old_win_width || new_win_height != old_win_height) {
       old_win_width = new_win_width; old_win_height = new_win_height;
-      ngf_resize_context(init_data.context, (uint32_t)new_win_width, (uint32_t)new_win_height);
+      ngf_resize_context(init_data.context, (uint32_t)new_win_width,
+                         (uint32_t)new_win_height);
     }
     
     if (ngf_begin_frame(init_data.context) == NGF_ERROR_OK) {
       // Notify application.
-      on_frame((uint32_t)old_win_width, (uint32_t)old_win_height, init_data.userdata);
+      on_frame((uint32_t)old_win_width, (uint32_t)old_win_height,
+                (float)glfwGetTime(),
+                init_data.userdata);
       // Give application a chance to submit its UI drawing commands.
       // TODO: make toggleable.
-      //ImGui::GetIO().DisplaySize.x = (float)win_size_x;
-      //ImGui::GetIO().DisplaySize.y = (float)win_size_y;
-      //ImGui::NewFrame();
-      //ImGui_ImplGlfw_NewFrame();
-      //on_ui(init_data.userdata);
+      ImGui::GetIO().DisplaySize.x = (float)new_win_width;
+      ImGui::GetIO().DisplaySize.y = (float)new_win_height;
+      ImGui::NewFrame();
+      ImGui_ImplGlfw_NewFrame();
+      on_ui(init_data.userdata);
       // TODO: draw debug console window.
 
       // Draw the UI.
-      /*ngf_start_cmd_buffer(uibuf);
+      ngf_start_cmd_buffer(uibuf);
       ngf_cmd_begin_pass(uibuf, defaultrt);
-      //ui.record_rendering_commands(uibuf);
+      ui.record_rendering_commands(uibuf);
       ngf_cmd_end_pass(uibuf);
       ngf_end_cmd_buffer(uibuf);
       ngf_cmd_buffer *b = uibuf.get();
-      ngf_submit_cmd_buffer(1u, &b);*/
+      ngf_submit_cmd_buffer(1u, &b);
 
       // End frame.
       ngf_end_frame(init_data.context);
