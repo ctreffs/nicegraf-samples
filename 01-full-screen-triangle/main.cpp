@@ -63,7 +63,7 @@ init_result on_initialized(uintptr_t native_handle,
   err = ngf_set_context(nicegraf_context);
   assert(err == NGF_ERROR_OK);
 
-    // Set up a render pass.
+  // Set up a render pass.
   ngf_clear clear;
   clear.clear_color[0] = 0.6f;
   clear.clear_color[1] = 0.7f;
