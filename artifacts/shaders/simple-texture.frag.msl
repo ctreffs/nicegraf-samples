@@ -1,0 +1,14 @@
+#include <metal_stdlib>
+using namespace metal;
+
+struct outputs {
+  float4 pos [[position]];
+  float4 color;
+  float2 uv;
+};
+
+fragment float4 main0(outputs v[[stage_in]],
+                      texture2d<float> tex[[texture(0)]],
+                      sampler s[[sampler(0)]]) {
+  return tex.sample(s, v.uv);
+}

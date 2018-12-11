@@ -1,11 +1,12 @@
 #include <metal_stdlib>
 using namespace metal;
 
-struct Outputs {
+struct outputs {
   float4 pos [[position]];
   float4 color;
+  float2 uv;
 };
 
-fragment float4 main0(Outputs o [[stage_in]]) {
+fragment float4 main0(outputs o [[stage_in]]) {
   return float4(0.5 * (o.color.xyz + 0.5), 1.0);
 }

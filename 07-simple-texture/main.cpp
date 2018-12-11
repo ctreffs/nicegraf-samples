@@ -106,7 +106,7 @@ init_result on_initialized(uintptr_t native_handle,
   FILE *image = fopen("textures/LENA.DATA", "rb");
   assert(image != NULL);
   fseek(image, 0, SEEK_END);
-  const uint32_t image_data_size = ftell(image);
+  const uint32_t image_data_size = (uint32_t)ftell(image);
   fseek(image, 0, SEEK_SET);
   uint8_t *image_data = new uint8_t[image_data_size];
   size_t read_bytes = fread(image_data, 1, image_data_size, image);
@@ -114,13 +114,14 @@ init_result on_initialized(uintptr_t native_handle,
   fclose(image);
   err = ngf_populate_image(state->image.get(), 0u, {0u, 0u, 0u},
                            {512u, 512u, 1u}, image_data);
-  delete image_data;
+  delete[] image_data;
   assert(err == NGF_ERROR_OK);
 
   // Create sampler.
   ngf_sampler_info samp_info {
     NGF_FILTER_LINEAR,
     NGF_FILTER_LINEAR,
+    NGF_FILTER_NEAREST,
     NGF_WRAP_MODE_CLAMP_TO_EDGE,
     NGF_WRAP_MODE_CLAMP_TO_EDGE,
     NGF_WRAP_MODE_CLAMP_TO_EDGE,
