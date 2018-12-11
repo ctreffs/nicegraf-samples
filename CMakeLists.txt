@@ -73,6 +73,7 @@ target_include_directories(common PUBLIC
   
 target_compile_options(common PRIVATE ${COMMON_COMPILE_OPTS})
 
+
 target_link_libraries(common glfw imgui nicegraf nicegraf_util)
 
 if(WIN32)
@@ -106,3 +107,4 @@ add_sample("03-hexagon")
 add_sample("04-hexagon-indexed")
 add_sample("05-uniform-buffers")
 add_sample("06-depth")
+add_sample("07-simple-texture")
