@@ -1,0 +1,28 @@
+#include <metal_stdlib>
+using namespace metal;
+
+struct TriangleDataBuf {
+  float scale;
+  float offset_x;
+  float offset_y;
+  float depth;
+  float4 color;
+};
+
+struct VertexOutputs {
+  float4 pos [[position]];
+  float4 color [[flat]]; 
+};
+
+vertex VertexOutputs main0(uint v_id[[vertex_id]],
+                           device TriangleDataBuf *tri[[buffer(1)]]) {
+  const float2 pos[] = {
+    float2(-1.0, -1.0),
+    float2( 1.0, -1.0),
+    float2( 0.0,  1.0) };
+  VertexOutputs results;
+  results.pos = float4(pos[v_id % 3] * tri->scale + float2(tri->offset_x, tri->offset_y), tri->depth, 1.0);
+  results.color = tri->color;
+  return results;
+}
+
