@@ -16,8 +16,8 @@ ngf_imgui::ngf_imgui() {
   // Simple pipeline layout with just one descriptor set that has
   // a uniform buffer and a texture.
   ngf_descriptor_info descs[] = {
-    { NGF_DESCRIPTOR_UNIFORM_BUFFER, 0u },
-    { NGF_DESCRIPTOR_TEXTURE_AND_SAMPLER, 1u },
+    { NGF_DESCRIPTOR_UNIFORM_BUFFER, 0u, NGF_DESCRIPTOR_VERTEX_STAGE_BIT },
+    { NGF_DESCRIPTOR_TEXTURE_AND_SAMPLER, 1u, NGF_DESCRIPTOR_FRAGMENT_STAGE_BIT },
   };
   ngf_error err =
       ngf_util_create_simple_layout(descs, 2u, &pipeline_data.layout_info);
@@ -98,6 +98,7 @@ ngf_imgui::ngf_imgui() {
 
   // Create a sampler for the font texture.
   ngf_sampler_info sampler_info {
+    NGF_FILTER_NEAREST,
     NGF_FILTER_NEAREST,
     NGF_FILTER_NEAREST,
     NGF_WRAP_MODE_CLAMP_TO_EDGE,
@@ -229,7 +230,7 @@ void ngf_imgui::record_rendering_commands(ngf_cmd_buffer *cmdbuf) {
             clip_rect.z >= 0.0f && clip_rect.w >= 0.0f) {
           const ngf_irect2d scissor_rect {
             (int32_t)clip_rect.x,
-            (int32_t)(fb_height - clip_rect.w),
+            (int32_t)clip_rect.y,
             (uint32_t)(clip_rect.z - clip_rect.x),
             (uint32_t)(clip_rect.w - clip_rect.y)
           };
