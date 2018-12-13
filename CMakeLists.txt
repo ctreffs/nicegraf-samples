@@ -24,8 +24,6 @@ cmake_minimum_required(VERSION 3.0.2)
 
 project(nicegraf-samples)
 
-set(CMAKE_CXX_FLAGS_DEBUG  "-g")
-
 if (WIN32)
   set(COMMON_COMPILE_OPTS "/W4" "/WX")
 else()
