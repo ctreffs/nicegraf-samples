@@ -159,7 +159,7 @@ int main(int, char **) {
 ngf::shader_stage load_shader_stage(const char *root_name,
                                     ngf_stage_type type) {
   static const char *stage_names[] = {
-    "vert", "tesc", "tese", "geom", "frag"
+    "vert", "frag"
   };
   std::string file_name =
       "shaders/" + std::string(root_name) + "." + stage_names[type] +
