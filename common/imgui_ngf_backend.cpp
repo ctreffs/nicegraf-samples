@@ -230,7 +230,7 @@ void ngf_imgui::record_rendering_commands(ngf_cmd_buffer *cmdbuf) {
             clip_rect.z >= 0.0f && clip_rect.w >= 0.0f) {
           const ngf_irect2d scissor_rect {
             (int32_t)clip_rect.x,
-            (int32_t)clip_rect.y,
+            fb_height - (int32_t)clip_rect.w,
             (uint32_t)(clip_rect.z - clip_rect.x),
             (uint32_t)(clip_rect.w - clip_rect.y)
           };
