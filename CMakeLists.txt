@@ -98,6 +98,7 @@ function (add_sample number name)
   target_link_libraries(${SAMPLE} common ${NGF_OPENGL_LIB})
   target_compile_options(${SAMPLE} PRIVATE ${COMMON_COMPILE_OPTS})
   set_output_dir(${SAMPLE} "${CMAKE_CURRENT_LIST_DIR}/artifacts")
+  set_target_properties(${SAMPLE} PROPERTIES PDB_OUTPUT_DIRECTORY "${CMAKE_CURRENT_LIST_DIR}/build")
 endfunction(add_sample)
 
 add_sample("00" "imgui")
