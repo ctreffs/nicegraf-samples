@@ -79,6 +79,7 @@ init_result on_initialized(uintptr_t native_handle,
   spec_info.specializations = specs;
   spec_info.value_buffer = spec_data;
   pipe_info.spec_info = &spec_info;
+  pipe_info.compatible_render_target = state->default_rt.get();
   
   // Configure the first pipeline.
   pipe_info.nshader_stages = 2u;

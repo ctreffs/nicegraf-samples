@@ -76,6 +76,8 @@ init_result on_initialized(uintptr_t native_handle,
   pipe_info.nshader_stages = 2u;
   pipe_info.shader_stages[0] = state->vert_stage.get();
   pipe_info.shader_stages[1] = state->frag_stage.get();
+  pipe_info.compatible_render_target = state->default_rt.get();
+  
   // Create a simple pipeline layout.
   ngf_descriptor_info desc_info {
     NGF_DESCRIPTOR_TEXTURE_AND_SAMPLER,
