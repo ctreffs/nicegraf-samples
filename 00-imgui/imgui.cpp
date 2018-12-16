@@ -93,7 +93,7 @@ void on_frame(uint32_t, uint32_t, float, void *userdata) {
   ngf_submit_cmd_buffer(1u, &b);
 }
 
-// Called every time the application has to dra an ImGUI overlay.
+// Called every time the application has to draw an ImGUI overlay.
 void on_ui(void*) {
   ImGui::ShowDemoWindow();
 }
