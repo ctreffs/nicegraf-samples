@@ -8,6 +8,14 @@ ngf_imgui::ngf_imgui() {
   vertex_stage_ = load_shader_stage("imgui", NGF_STAGE_VERTEX);
   fragment_stage_ = load_shader_stage("imgui", NGF_STAGE_FRAGMENT);
 
+  // Obtain default rendertarget.
+  ngf_render_target *rt;
+  ngf_error err =
+      ngf_default_render_target(NGF_LOAD_OP_DONTCARE, NGF_LOAD_OP_DONTCARE,
+                                NULL, NULL, &rt);
+  assert(err == NGF_ERROR_OK);
+  default_rt = ngf::render_target(rt);
+  
   // Initial pipeline configuration with OpenGL-style defaults.
   ngf_util_graphics_pipeline_data pipeline_data;
   ngf_util_create_default_graphics_pipeline_data(nullptr,
@@ -19,8 +27,7 @@ ngf_imgui::ngf_imgui() {
     { NGF_DESCRIPTOR_UNIFORM_BUFFER, 0u, NGF_DESCRIPTOR_VERTEX_STAGE_BIT },
     { NGF_DESCRIPTOR_TEXTURE_AND_SAMPLER, 1u, NGF_DESCRIPTOR_FRAGMENT_STAGE_BIT },
   };
-  ngf_error err =
-      ngf_util_create_simple_layout(descs, 2u, &pipeline_data.layout_info);
+  err = ngf_util_create_simple_layout(descs, 2u, &pipeline_data.layout_info);
   assert(err == NGF_ERROR_OK);
 
   // Set up blend state.
@@ -41,6 +48,7 @@ ngf_imgui::ngf_imgui() {
   pipeline_info.nshader_stages = 2u;
   pipeline_info.shader_stages[0] = vertex_stage_.get();
   pipeline_info.shader_stages[1] = fragment_stage_.get();
+  pipeline_info.compatible_render_target = default_rt.get();
 
   // Configure vertex input.
   ngf_vertex_attrib_desc vertex_attribs[] = {
