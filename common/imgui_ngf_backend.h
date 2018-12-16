@@ -24,5 +24,5 @@ private:
   ngf::index_buffer index_buffer_;
   ngf::shader_stage vertex_stage_;
   ngf::shader_stage fragment_stage_;
-  ngf::render_target default_rt;
+  ngf::render_target default_rt_;
 };

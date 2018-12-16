@@ -14,7 +14,7 @@ ngf_imgui::ngf_imgui() {
       ngf_default_render_target(NGF_LOAD_OP_DONTCARE, NGF_LOAD_OP_DONTCARE,
                                 NULL, NULL, &rt);
   assert(err == NGF_ERROR_OK);
-  default_rt = ngf::render_target(rt);
+  default_rt_ = ngf::render_target(rt);
   
   // Initial pipeline configuration with OpenGL-style defaults.
   ngf_util_graphics_pipeline_data pipeline_data;
@@ -48,7 +48,7 @@ ngf_imgui::ngf_imgui() {
   pipeline_info.nshader_stages = 2u;
   pipeline_info.shader_stages[0] = vertex_stage_.get();
   pipeline_info.shader_stages[1] = fragment_stage_.get();
-  pipeline_info.compatible_render_target = default_rt.get();
+  pipeline_info.compatible_render_target = default_rt_.get();
 
   // Configure vertex input.
   ngf_vertex_attrib_desc vertex_attribs[] = {
