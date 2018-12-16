@@ -20,7 +20,7 @@ vertex outputs main0(uint v_id[[vertex_id]]) {
   };
   outputs o;
   o.pos = vertices[v_id % 3];
-  o.color = o.pos;
+  o.color = 0.5 * (o.pos + float4(1.0));
   o.uv = texcoords[v_id % 3];
   return o;
 }

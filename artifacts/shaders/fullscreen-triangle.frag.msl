@@ -8,5 +8,5 @@ struct outputs {
 };
 
 fragment float4 main0(outputs o [[stage_in]]) {
-  return float4(0.5 * (o.color.xyz + 0.5), 1.0);
+  return float4(o.color.xyz, 1.0);
 }

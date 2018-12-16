@@ -57,13 +57,39 @@ init_result on_initialized(uintptr_t native_handle,
   clear.clear_color[2] = 0.8f;
   clear.clear_color[3] = 1.0f;
   
+  // Create the image.
+  const ngf_extent3d img_size { 512u, 512u, 1u };
+  const ngf_image_info img_info {
+    NGF_IMAGE_TYPE_IMAGE_2D,
+    img_size,
+    1u,
+    NGF_IMAGE_FORMAT_BGRA8,
+    0u,
+    NGF_IMAGE_USAGE_SAMPLE_FROM | NGF_IMAGE_USAGE_ATTACHMENT
+  };
+  ngf_error err = state->rt_texture.initialize(img_info);
+  assert(err == NGF_ERROR_OK);
+  
   // Obtain the default render target.
   ngf_render_target *rt;
-  ngf_error err =
-      ngf_default_render_target(NGF_LOAD_OP_CLEAR, NGF_LOAD_OP_DONTCARE,
-                                &clear, NULL, &rt);
+  err = ngf_default_render_target(NGF_LOAD_OP_CLEAR, NGF_LOAD_OP_DONTCARE,
+                                  &clear, NULL, &rt);
   assert(err == NGF_ERROR_OK);
   state->default_rt = ngf::render_target(rt);
+  
+  // Create the offscreen render target.
+  ngf_attachment  offscreen_color_attachment{
+    {state->rt_texture.get(), 0u, 0u, false},
+    NGF_ATTACHMENT_COLOR,
+    NGF_LOAD_OP_CLEAR,
+    {{0.0f}}
+  };
+  ngf_render_target_info rt_info {
+    &offscreen_color_attachment,
+    1u
+  };
+  err = state->offscreen_rt.initialize(rt_info);
+  assert(err == NGF_ERROR_OK);
 
   // Load shader stages.
   state->vert_stage =
@@ -82,6 +108,7 @@ init_result on_initialized(uintptr_t native_handle,
   blit_pipe_info.nshader_stages = 2u;
   blit_pipe_info.shader_stages[0] = state->vert_stage.get();
   blit_pipe_info.shader_stages[1] = state->blit_frag_stage.get();
+  blit_pipe_info.compatible_render_target = state->default_rt.get();
   // Create a simple pipeline layout.
   ngf_descriptor_info desc_info {
     NGF_DESCRIPTOR_TEXTURE_AND_SAMPLER,
@@ -105,35 +132,8 @@ init_result on_initialized(uintptr_t native_handle,
   offscreen_pipe_info.nshader_stages = 2u;
   offscreen_pipe_info.shader_stages[0] = state->vert_stage.get();
   offscreen_pipe_info.shader_stages[1] = state->offscreen_frag_stage.get();
+  offscreen_pipe_info.compatible_render_target = state->offscreen_rt.get();
   err = state->offscreen_pipeline.initialize(offscreen_pipe_info);
-  assert(err == NGF_ERROR_OK);
-
-  // Create the image.
-  const ngf_extent3d img_size { 512u, 512u, 1u };
-  const ngf_image_info img_info {
-    NGF_IMAGE_TYPE_IMAGE_2D,
-    img_size,
-    1u,
-    NGF_IMAGE_FORMAT_RGBA8,
-    0u,
-    NGF_IMAGE_USAGE_SAMPLE_FROM | NGF_IMAGE_USAGE_ATTACHMENT
-  };
-  err = state->rt_texture.initialize(img_info);
-  assert(err == NGF_ERROR_OK);
-
-  // Populate image with data.
-  FILE *image = fopen("textures/LENA.DATA", "rb");
-  assert(image != NULL);
-  fseek(image, 0, SEEK_END);
-  const uint32_t image_data_size = (uint32_t)ftell(image);
-  fseek(image, 0, SEEK_SET);
-  uint8_t *image_data = new uint8_t[image_data_size];
-  size_t read_bytes = fread(image_data, 1, image_data_size, image);
-  assert(read_bytes == 512u * 512u * 4u);
-  fclose(image);
-  err = ngf_populate_image(state->rt_texture.get(), 0u, {0u, 0u, 0u},
-                           {512u, 512u, 1u}, image_data);
-  delete[] image_data;
   assert(err == NGF_ERROR_OK);
 
   // Create sampler.
@@ -157,27 +157,13 @@ init_result on_initialized(uintptr_t native_handle,
   ngf_descriptor_write write_op;
   write_op.type = NGF_DESCRIPTOR_TEXTURE_AND_SAMPLER;
   write_op.binding = 0u;
-  write_op.op.image_sampler_bind.image_subresource.image = state->rt_texture.get();
+  write_op.op.image_sampler_bind.image_subresource.image =
+      state->rt_texture.get();
   write_op.op.image_sampler_bind.image_subresource.layered = false;
   write_op.op.image_sampler_bind.image_subresource.layer = 0u;
   write_op.op.image_sampler_bind.image_subresource.mip_level = 0u;
   write_op.op.image_sampler_bind.sampler = state->sampler.get();
   err = ngf_apply_descriptor_writes(&write_op, 1u, state->desc_set.get());
-  assert(err == NGF_ERROR_OK);
-
-  // Create the offscreen render target.
-  ngf_attachment  offscreen_color_attachment{
-    {state->rt_texture.get(), 0u, 0u, false},
-    NGF_ATTACHMENT_COLOR,
-    NGF_LOAD_OP_CLEAR,
-    {0.0f}
-
-  };
-  ngf_render_target_info rt_info {
-    &offscreen_color_attachment,
-    1u
-  };
-  err = state->offscreen_rt.initialize(rt_info);
   assert(err == NGF_ERROR_OK);
 
   return { std::move(ctx), state};
