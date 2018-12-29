@@ -149,20 +149,20 @@ int main(int, char **) {
 }
 
 #if defined(NGF_BACKEND_OPENGL)
-#define SHADER_EXTENSION ".glsl"
+#define SHADER_EXTENSION ".430.glsl"
 #elif defined(NGF_BACKEND_VULKAN)
 #define SHADER_EXTENSION ".spv"
 #else
-#define SHADER_EXTENSION ".msl"
+#define SHADER_EXTENSION ".12.msl"
 #endif
 
 ngf::shader_stage load_shader_stage(const char *root_name,
                                     ngf_stage_type type) {
   static const char *stage_names[] = {
-    "vert", "frag"
+    "vs", "ps"
   };
   std::string file_name =
-      "shaders/" + std::string(root_name) + "." + stage_names[type] +
+      "shaders/generated/" + std::string(root_name) + "." + stage_names[type] +
        SHADER_EXTENSION;
   std::ifstream fs(file_name);
   std::vector<char> content((std::istreambuf_iterator<char>(fs)),

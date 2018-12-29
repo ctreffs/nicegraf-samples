@@ -7,3 +7,6 @@
 [submodule "nicegraf"]
 	path = nicegraf
 	url = https://github.com/nicebyte/nicegraf
+[submodule "nicegraf-shaderc"]
+	path = nicegraf-shaderc
+	url = https://github.com/nicebyte/nicegraf-shaderc
