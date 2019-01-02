@@ -20,6 +20,8 @@ ngf_imgui::ngf_imgui() {
   ngf_util_graphics_pipeline_data pipeline_data;
   ngf_util_create_default_graphics_pipeline_data(nullptr,
                                                  &pipeline_data);
+  
+  plmd *pipeline_metadata = load_pipeline_metadata("imgui");
 
   // Simple pipeline layout with just one descriptor set that has
   // a uniform buffer and a texture.
@@ -49,6 +51,12 @@ ngf_imgui::ngf_imgui() {
   pipeline_info.shader_stages[0] = vertex_stage_.get();
   pipeline_info.shader_stages[1] = fragment_stage_.get();
   pipeline_info.compatible_render_target = default_rt_.get();
+
+  // Assign separate-to-combined maps
+  pipeline_info.image_to_combined_map =
+      ngf_plmd_get_image_to_cis_map(pipeline_metadata);
+  pipeline_info.sampler_to_combined_map =
+      ngf_plmd_get_sampler_to_cis_map(pipeline_metadata);
 
   // Configure vertex input.
   ngf_vertex_attrib_desc vertex_attribs[] = {
