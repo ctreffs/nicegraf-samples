@@ -13,7 +13,7 @@ struct ImGuiPSInput {
 };
 
 cbuffer MatUniformBuffer : register(b0){
-  float4x4 u_Projection;
+  row_major float4x4 u_Projection;
 }
 
 [vk::binding(1, 0)] uniform Texture2D u_Texture;
@@ -29,5 +29,5 @@ ImGuiPSInput VSMain(ImGuiVSInput input) {
 }
 
 float4 PSMain(ImGuiPSInput input) : SV_TARGET {
-  return u_Texture.Sample(u_Sampler, input.uv);
+  return input.color * u_Texture.Sample(u_Sampler, input.uv);
 }
