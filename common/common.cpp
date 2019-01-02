@@ -179,6 +179,18 @@ ngf::shader_stage load_shader_stage(const char *root_name,
   return stage;
 }
 
+plmd* load_pipeline_metadata(const char *name) {
+   std::string file_name =
+      "shaders/generated/" + std::string(name) + ".pipeline";
+  std::ifstream fs(file_name);
+  std::vector<char> content((std::istreambuf_iterator<char>(fs)),
+                             std::istreambuf_iterator<char>()); 
+  plmd *m;
+  ngf_plmd_error err = ngf_plmd_load(content.data(), content.size(), NULL, &m);
+  assert(err == NGF_PLMD_ERROR_OK);
+  return m;
+}
+
 ngf::context create_default_context(uintptr_t handle, uint32_t w, uint32_t h) {
   // Create a nicegraf context.
   ngf_swapchain_info swapchain_info = {

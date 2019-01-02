@@ -18,10 +18,12 @@ SOFTWARE.
 */
 #pragma once
 
+#include <nicegraf.h>
 #include <nicegraf_wrappers.h>
 
 ngf::shader_stage load_shader_stage(const char *root_name,
                                     ngf_stage_type type);
+plmd* load_pipeline_metadata(const char *name);
 
 ngf::context create_default_context(uintptr_t handle, uint32_t w, uint32_t h);
 
