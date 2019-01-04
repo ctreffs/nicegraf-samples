@@ -58,9 +58,9 @@ init_result on_initialized(uintptr_t native_handle,
 
   // Load shader stages.
   state->vert_stage =
-      load_shader_stage("fullscreen-triangle", NGF_STAGE_VERTEX);
+      load_shader_stage("fullscreen-triangle", "VSMain", NGF_STAGE_VERTEX);
   state->frag_stage =
-      load_shader_stage("spec-consts", NGF_STAGE_FRAGMENT);
+      load_shader_stage("spec-consts", "PSMain", NGF_STAGE_FRAGMENT);
 
   // Initial pipeline configuration with OpenGL-style defaults.
   ngf_util_graphics_pipeline_data pipeline_data;

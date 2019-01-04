@@ -76,9 +76,9 @@ init_result on_initialized(uintptr_t native_handle,
 
   // Load shader stages.
   state->vert_stage =
-      load_shader_stage("hexagon-animated", NGF_STAGE_VERTEX);
+      load_shader_stage("hexagon-animated", "VSMain", NGF_STAGE_VERTEX);
   state->frag_stage =
-      load_shader_stage("hexagon", NGF_STAGE_FRAGMENT);
+      load_shader_stage("hexagon", "PSMain", NGF_STAGE_FRAGMENT);
 
   // Initial pipeline configuration with OpenGL-style defaults.
   ngf_util_graphics_pipeline_data pipeline_data;

@@ -68,8 +68,8 @@ init_result on_initialized(uintptr_t native_handle,
   state->default_rt.reset(default_rt);
 
   // Load shaders.
-  state->vert_stage = load_shader_stage("depth", NGF_STAGE_VERTEX);
-  state->frag_stage = load_shader_stage("depth", NGF_STAGE_FRAGMENT);
+  state->vert_stage = load_shader_stage("depth", "VSMain", NGF_STAGE_VERTEX);
+  state->frag_stage = load_shader_stage("depth", "PSMain", NGF_STAGE_FRAGMENT);
    
   // Initial pipeline configuration with OpenGL-style defaults.
   ngf_util_graphics_pipeline_data pipeline_data;

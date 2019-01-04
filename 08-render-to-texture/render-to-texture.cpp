@@ -93,11 +93,11 @@ init_result on_initialized(uintptr_t native_handle,
 
   // Load shader stages.
   state->vert_stage =
-      load_shader_stage("fullscreen-triangle", NGF_STAGE_VERTEX);
+      load_shader_stage("fullscreen-triangle", "VSMain", NGF_STAGE_VERTEX);
   state->blit_frag_stage =
-      load_shader_stage("simple-texture", NGF_STAGE_FRAGMENT);
+      load_shader_stage("simple-texture", "PSMain", NGF_STAGE_FRAGMENT);
   state->offscreen_frag_stage =
-      load_shader_stage("fullscreen-triangle", NGF_STAGE_FRAGMENT);
+      load_shader_stage("fullscreen-triangle", "PSMain", NGF_STAGE_FRAGMENT);
 
   // Create pipeline for blit pass.
   ngf_util_graphics_pipeline_data blit_pipeline_data;
@@ -110,12 +110,19 @@ init_result on_initialized(uintptr_t native_handle,
   blit_pipe_info.shader_stages[1] = state->blit_frag_stage.get();
   blit_pipe_info.compatible_render_target = state->default_rt.get();
   // Create a simple pipeline layout.
-  ngf_descriptor_info desc_info {
-    NGF_DESCRIPTOR_TEXTURE_AND_SAMPLER,
-    0u,
-    NGF_DESCRIPTOR_FRAGMENT_STAGE_BIT
+  ngf_descriptor_info desc_info[] = {
+    {
+      NGF_DESCRIPTOR_TEXTURE,
+      1u,
+      NGF_DESCRIPTOR_FRAGMENT_STAGE_BIT
+    },
+    {
+      NGF_DESCRIPTOR_SAMPLER,
+      2u,
+      NGF_DESCRIPTOR_FRAGMENT_STAGE_BIT
+    }
   };
-  err = ngf_util_create_simple_layout(&desc_info, 1u,
+  err = ngf_util_create_simple_layout(desc_info, 2u,
                                       &blit_pipeline_data.layout_info);
   assert(err == NGF_ERROR_OK);
   state->set_layout.reset(
@@ -154,16 +161,18 @@ init_result on_initialized(uintptr_t native_handle,
 
   // Create and write to the descriptor set.
   state->desc_set.initialize(*state->set_layout.get());
-  ngf_descriptor_write write_op;
-  write_op.type = NGF_DESCRIPTOR_TEXTURE_AND_SAMPLER;
-  write_op.binding = 0u;
-  write_op.op.image_sampler_bind.image_subresource.image =
-      state->rt_texture.get();
-  write_op.op.image_sampler_bind.image_subresource.layered = false;
-  write_op.op.image_sampler_bind.image_subresource.layer = 0u;
-  write_op.op.image_sampler_bind.image_subresource.mip_level = 0u;
-  write_op.op.image_sampler_bind.sampler = state->sampler.get();
-  err = ngf_apply_descriptor_writes(&write_op, 1u, state->desc_set.get());
+  ngf_descriptor_write write_ops[2];
+  write_ops[0].type = NGF_DESCRIPTOR_TEXTURE;
+  write_ops[0].binding = 1u;
+  write_ops[0].op.image_sampler_bind.image_subresource.image = state->rt_texture.get();
+  write_ops[0].op.image_sampler_bind.image_subresource.layered = false;
+  write_ops[0].op.image_sampler_bind.image_subresource.layer = 0u;
+  write_ops[0].op.image_sampler_bind.image_subresource.mip_level = 0u;
+  write_ops[0].op.image_sampler_bind.sampler = NULL;
+  write_ops[1].type = NGF_DESCRIPTOR_SAMPLER;
+  write_ops[1].binding = 2u;
+  write_ops[1].op.image_sampler_bind.sampler = state->sampler.get();
+  err = ngf_apply_descriptor_writes(write_ops, 2u, state->desc_set.get());
   assert(err == NGF_ERROR_OK);
 
   return { std::move(ctx), state};
