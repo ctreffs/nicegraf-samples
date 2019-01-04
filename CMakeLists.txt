@@ -26,9 +26,11 @@ project(nicegraf-samples)
 
 if (WIN32)
   set(COMMON_COMPILE_OPTS "/W4" "/WX")
+  set(EXECUTABLE_SUFFIX ".exe")
 else()
   set(COMMON_COMPILE_OPTS "--std=c++14" "-Wall" "-Wconversion" "-Werror"
         "-Wno-unknown-pragmas")
+  set(EXECUTABLE_SUFFIX "")
 endif()
 
 add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/nicegraf)
@@ -116,7 +118,7 @@ foreach(source_path ${shader_files})
     add_custom_command(OUTPUT ${output_files_list}
                        MAIN_DEPENDENCY ${source_path}
                        DEPENDS nicegraf_shaderc
-                       COMMAND ${CMAKE_CURRENT_LIST_DIR}/nicegraf-shaderc/nicegraf_shaderc.exe ARGS ${source_path} "-t" "gl430" "-t" "msl12" "-O" "../generated/"
+                       COMMAND ${CMAKE_CURRENT_LIST_DIR}/nicegraf-shaderc/nicegraf_shaderc${EXECUTABLE_SUFFIX} ARGS ${source_path} "-t" "gl430" "-t" "msl12" "-O" "../generated/"
                        WORKING_DIRECTORY ${CMAKE_CURRENT_LIST_DIR}/artifacts/shaders/hlsl)
     set(generated_shaders_list "${output_files_list};${generated_shaders_list}")
   endif()

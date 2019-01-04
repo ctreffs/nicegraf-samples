@@ -4,5 +4,4 @@ artifacts/imgui.ini
 artifacts/imgui_log.txt
 artifacts/*.exe
 artifacts/*.ilk
-artifacts/shaders/generated/*
 build/*
