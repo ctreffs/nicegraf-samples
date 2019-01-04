@@ -5,8 +5,8 @@
 #include <vector>
 
 ngf_imgui::ngf_imgui() {
-  vertex_stage_ = load_shader_stage("imgui", NGF_STAGE_VERTEX);
-  fragment_stage_ = load_shader_stage("imgui", NGF_STAGE_FRAGMENT);
+  vertex_stage_ = load_shader_stage("imgui", "VSMain", NGF_STAGE_VERTEX);
+  fragment_stage_ = load_shader_stage("imgui", "PSMain", NGF_STAGE_FRAGMENT);
 
   // Obtain default rendertarget.
   ngf_render_target *rt;
@@ -27,9 +27,10 @@ ngf_imgui::ngf_imgui() {
   // a uniform buffer and a texture.
   ngf_descriptor_info descs[] = {
     { NGF_DESCRIPTOR_UNIFORM_BUFFER, 0u, NGF_DESCRIPTOR_VERTEX_STAGE_BIT },
-    { NGF_DESCRIPTOR_TEXTURE_AND_SAMPLER, 1u, NGF_DESCRIPTOR_FRAGMENT_STAGE_BIT },
+    { NGF_DESCRIPTOR_TEXTURE, 1u, NGF_DESCRIPTOR_FRAGMENT_STAGE_BIT },
+    { NGF_DESCRIPTOR_SAMPLER, 2u, NGF_DESCRIPTOR_FRAGMENT_STAGE_BIT },
   };
-  err = ngf_util_create_simple_layout(descs, 2u, &pipeline_data.layout_info);
+  err = ngf_util_create_simple_layout(descs, 3u, &pipeline_data.layout_info);
   assert(err == NGF_ERROR_OK);
 
   // Set up blend state.
@@ -136,19 +137,25 @@ ngf_imgui::ngf_imgui() {
   };
 
   // Create and apply descriptor write operations.
-  ngf_descriptor_write writes[2];
+  ngf_descriptor_write writes[3];
   writes[0].binding = 0u;
   writes[0].type = NGF_DESCRIPTOR_UNIFORM_BUFFER;
   writes[0].op.buffer_bind = ngf_descriptor_write_buffer {
     projmtx_ubo_.get(), 0u, 16u * sizeof(float)
   };
   writes[1].binding = 1u;
-  writes[1].type = NGF_DESCRIPTOR_TEXTURE_AND_SAMPLER;
+  writes[1].type = NGF_DESCRIPTOR_TEXTURE;
   writes[1].op.image_sampler_bind = ngf_descriptor_write_image_sampler {
     font_ref,
-    tex_sampler_.get()
+    NULL,
   };
-  ngf_apply_descriptor_writes(writes, 2u, desc_set_);
+  writes[2].binding = 2u;
+  writes[2].type = NGF_DESCRIPTOR_SAMPLER;
+  writes[2].op.image_sampler_bind = ngf_descriptor_write_image_sampler {
+    font_ref,
+    tex_sampler_.get(),
+  };
+  ngf_apply_descriptor_writes(writes, 3u, desc_set_);
 }
 
 void ngf_imgui::record_rendering_commands(ngf_cmd_buffer *cmdbuf) {
