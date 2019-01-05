@@ -25,12 +25,8 @@ ngf_imgui::ngf_imgui() {
 
   // Simple pipeline layout with just one descriptor set that has
   // a uniform buffer and a texture.
-  ngf_descriptor_info descs[] = {
-    { NGF_DESCRIPTOR_UNIFORM_BUFFER, 0u, NGF_DESCRIPTOR_VERTEX_STAGE_BIT },
-    { NGF_DESCRIPTOR_TEXTURE, 1u, NGF_DESCRIPTOR_FRAGMENT_STAGE_BIT },
-    { NGF_DESCRIPTOR_SAMPLER, 2u, NGF_DESCRIPTOR_FRAGMENT_STAGE_BIT },
-  };
-  err = ngf_util_create_simple_layout(descs, 3u, &pipeline_data.layout_info);
+  err = ngf_util_create_pipeline_layout_from_metadata(
+      ngf_plmd_get_layout(pipeline_metadata), &pipeline_data.layout_info);
   assert(err == NGF_ERROR_OK);
 
   // Set up blend state.
@@ -156,6 +152,8 @@ ngf_imgui::ngf_imgui() {
     tex_sampler_.get(),
   };
   ngf_apply_descriptor_writes(writes, 3u, desc_set_);
+
+  ngf_plmd_destroy(pipeline_metadata, NULL);
 }
 
 void ngf_imgui::record_rendering_commands(ngf_cmd_buffer *cmdbuf) {

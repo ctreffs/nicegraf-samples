@@ -64,9 +64,11 @@ init_result on_initialized(uintptr_t native_handle,
 
   // Load shader stages.
   state->vert_stage =
-      load_shader_stage("fullscreen-triangle", "VSMain", NGF_STAGE_VERTEX);
+      load_shader_stage("simple-texture", "VSMain", NGF_STAGE_VERTEX);
   state->frag_stage =
       load_shader_stage("simple-texture", "PSMain", NGF_STAGE_FRAGMENT);
+  plmd* pipeline_metadata = load_pipeline_metadata("simple-texture");
+  assert(pipeline_metadata);
 
   // Initial pipeline configuration with OpenGL-style defaults.
   ngf_util_graphics_pipeline_data pipeline_data;
@@ -77,26 +79,21 @@ init_result on_initialized(uintptr_t native_handle,
   pipe_info.shader_stages[0] = state->vert_stage.get();
   pipe_info.shader_stages[1] = state->frag_stage.get();
   pipe_info.compatible_render_target = state->default_rt.get();
-  
-  // Create a simple pipeline layout.
-  ngf_descriptor_info desc_info[] = {
-    {
-      NGF_DESCRIPTOR_TEXTURE,
-      1u,
-      NGF_DESCRIPTOR_FRAGMENT_STAGE_BIT
-    },
-    {
-      NGF_DESCRIPTOR_SAMPLER,
-      2u,
-      NGF_DESCRIPTOR_FRAGMENT_STAGE_BIT
-    }
-  };
-  err = ngf_util_create_simple_layout(desc_info, 2u,
-                                      &pipeline_data.layout_info);
+  pipe_info.image_to_combined_map =
+      ngf_plmd_get_image_to_cis_map(pipeline_metadata);
+  pipe_info.sampler_to_combined_map =
+      ngf_plmd_get_sampler_to_cis_map(pipeline_metadata);
+
+  // Create a pipeline layout from the loaded metadata.
+  err = ngf_util_create_pipeline_layout_from_metadata(
+     ngf_plmd_get_layout(pipeline_metadata), &pipeline_data.layout_info);
   assert(err == NGF_ERROR_OK);
   state->set_layout.reset(pipeline_data.layout_info.descriptors_layouts[0]);
   err = state->pipeline.initialize(pipe_info);
   assert(err == NGF_ERROR_OK);
+
+  // Done with the metadata.
+  ngf_plmd_destroy(pipeline_metadata, NULL);
 
   // Create the image.
   const ngf_extent3d img_size { 512u, 512u, 1u };

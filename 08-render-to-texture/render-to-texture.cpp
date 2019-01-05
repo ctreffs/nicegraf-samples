@@ -91,13 +91,14 @@ init_result on_initialized(uintptr_t native_handle,
   err = state->offscreen_rt.initialize(rt_info);
   assert(err == NGF_ERROR_OK);
 
-  // Load shader stages.
+  // Load shader stages and pipeline metadata.
   state->vert_stage =
       load_shader_stage("fullscreen-triangle", "VSMain", NGF_STAGE_VERTEX);
   state->blit_frag_stage =
       load_shader_stage("simple-texture", "PSMain", NGF_STAGE_FRAGMENT);
   state->offscreen_frag_stage =
       load_shader_stage("fullscreen-triangle", "PSMain", NGF_STAGE_FRAGMENT);
+  plmd *pipeline_metadata = load_pipeline_metadata("simple-texture");
 
   // Create pipeline for blit pass.
   ngf_util_graphics_pipeline_data blit_pipeline_data;
@@ -109,21 +110,14 @@ init_result on_initialized(uintptr_t native_handle,
   blit_pipe_info.shader_stages[0] = state->vert_stage.get();
   blit_pipe_info.shader_stages[1] = state->blit_frag_stage.get();
   blit_pipe_info.compatible_render_target = state->default_rt.get();
+  blit_pipe_info.image_to_combined_map =
+      ngf_plmd_get_image_to_cis_map(pipeline_metadata);
+  blit_pipe_info.sampler_to_combined_map =
+      ngf_plmd_get_sampler_to_cis_map(pipeline_metadata);
+
   // Create a simple pipeline layout.
-  ngf_descriptor_info desc_info[] = {
-    {
-      NGF_DESCRIPTOR_TEXTURE,
-      1u,
-      NGF_DESCRIPTOR_FRAGMENT_STAGE_BIT
-    },
-    {
-      NGF_DESCRIPTOR_SAMPLER,
-      2u,
-      NGF_DESCRIPTOR_FRAGMENT_STAGE_BIT
-    }
-  };
-  err = ngf_util_create_simple_layout(desc_info, 2u,
-                                      &blit_pipeline_data.layout_info);
+  err = ngf_util_create_pipeline_layout_from_metadata(
+    ngf_plmd_get_layout(pipeline_metadata), &blit_pipeline_data.layout_info);
   assert(err == NGF_ERROR_OK);
   state->set_layout.reset(
       blit_pipeline_data.layout_info.descriptors_layouts[0]);
