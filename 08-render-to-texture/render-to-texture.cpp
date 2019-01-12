@@ -37,8 +37,6 @@ struct app_state {
   ngf::graphics_pipeline offscreen_pipeline;
   ngf::image rt_texture;
   ngf::sampler sampler;
-  ngf::descriptor_set_layout set_layout;
-  ngf::descriptor_set desc_set;
 };
 
 // Called upon application initialization.
@@ -119,8 +117,6 @@ init_result on_initialized(uintptr_t native_handle,
   err = ngf_util_create_pipeline_layout_from_metadata(
     ngf_plmd_get_layout(pipeline_metadata), &blit_pipeline_data.layout_info);
   assert(err == NGF_ERROR_OK);
-  state->set_layout.reset(
-      blit_pipeline_data.layout_info.descriptors_layouts[0]);
   err = state->blit_pipeline.initialize(blit_pipe_info);
   assert(err == NGF_ERROR_OK);
 
@@ -153,22 +149,6 @@ init_result on_initialized(uintptr_t native_handle,
   err = state->sampler.initialize(samp_info);
   assert(err == NGF_ERROR_OK);
 
-  // Create and write to the descriptor set.
-  state->desc_set.initialize(*state->set_layout.get());
-  ngf_descriptor_write write_ops[2];
-  write_ops[0].type = NGF_DESCRIPTOR_TEXTURE;
-  write_ops[0].binding = 1u;
-  write_ops[0].op.image_sampler_bind.image_subresource.image = state->rt_texture.get();
-  write_ops[0].op.image_sampler_bind.image_subresource.layered = false;
-  write_ops[0].op.image_sampler_bind.image_subresource.layer = 0u;
-  write_ops[0].op.image_sampler_bind.image_subresource.mip_level = 0u;
-  write_ops[0].op.image_sampler_bind.sampler = NULL;
-  write_ops[1].type = NGF_DESCRIPTOR_SAMPLER;
-  write_ops[1].binding = 2u;
-  write_ops[1].op.image_sampler_bind.sampler = state->sampler.get();
-  err = ngf_apply_descriptor_writes(write_ops, 2u, state->desc_set.get());
-  assert(err == NGF_ERROR_OK);
-
   return { std::move(ctx), state};
 }
 
@@ -188,7 +168,21 @@ void on_frame(uint32_t w, uint32_t h, float, void *userdata) {
   ngf_cmd_bind_pipeline(cmd_buf, state->blit_pipeline);
   ngf_cmd_viewport(cmd_buf, &viewport);
   ngf_cmd_scissor(cmd_buf, &viewport);
-  ngf_cmd_bind_descriptor_set(cmd_buf, state->desc_set, 0u);
+  // Create and write to the descriptor set.
+  ngf_resource_bind_op bind_ops[2];
+  bind_ops[0].type = NGF_DESCRIPTOR_TEXTURE;
+  bind_ops[0].target_set = 0u;
+  bind_ops[0].target_binding = 1u;
+  bind_ops[0].info.image_sampler.image_subresource.image = state->rt_texture.get();
+  bind_ops[0].info.image_sampler.image_subresource.layered = false;
+  bind_ops[0].info.image_sampler.image_subresource.layer = 0u;
+  bind_ops[0].info.image_sampler.image_subresource.mip_level = 0u;
+  bind_ops[0].info.image_sampler.sampler = NULL;
+  bind_ops[1].type = NGF_DESCRIPTOR_SAMPLER;
+  bind_ops[1].target_set = 0u;
+  bind_ops[1].target_binding = 2u;
+  bind_ops[1].info.image_sampler.sampler = state->sampler.get();
+  ngf_cmd_bind_resources(cmd_buf, bind_ops, 2u);
   ngf_cmd_draw(cmd_buf, false, 0u, 3u, 1u);
   ngf_cmd_end_pass(cmd_buf);
   ngf_end_cmd_buffer(cmd_buf);

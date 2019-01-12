@@ -18,8 +18,6 @@ struct app_state {
   ngf::shader_stage frag_stage;
   ngf::graphics_pipeline pipeline;
   ngf::uniform_buffer uniform_data[2];
-  ngf::descriptor_set_layout desc_set_layout;
-  ngf::descriptor_set desc_sets[2];
 };
 
 init_result on_initialized(uintptr_t native_handle,
@@ -95,9 +93,7 @@ init_result on_initialized(uintptr_t native_handle,
   err = ngf_util_create_simple_layout(&desc_info, 1u,
                                       &pipeline_data.layout_info);
   assert(err == NGF_ERROR_OK);
-  // Capture the newly created desciptor set layout.
-  state->desc_set_layout.reset(
-    pipeline_data.layout_info.descriptors_layouts[0]);
+
   // Create the pipeline!
   err = state->pipeline.initialize(pipe_info);
   assert(err == NGF_ERROR_OK); 
@@ -121,19 +117,6 @@ init_result on_initialized(uintptr_t native_handle,
                                   sizeof(blue_triangle));
   assert(err == NGF_ERROR_OK);
 
-  // Create and populate the descriptor sets.
-  for (uint32_t i = 0u; i < 2u; ++i) {
-    err = state->desc_sets[i].initialize(*state->desc_set_layout.get());
-    assert(err == NGF_ERROR_OK);
-    ngf_descriptor_write write_op;
-    write_op.type = NGF_DESCRIPTOR_UNIFORM_BUFFER;
-    write_op.binding = 0u;
-    write_op.op.buffer_bind.buffer = state->uniform_data[i].get();
-    write_op.op.buffer_bind.offset = 0u;
-    write_op.op.buffer_bind.range = sizeof(triangle_data);
-    ngf_apply_descriptor_writes(&write_op, 1u, state->desc_sets[i].get());
-  }
-
   return {std::move(ctx), state};
  }
 
@@ -148,10 +131,20 @@ void on_frame(uint32_t w, uint32_t h, float, void *userdata) {
   ngf_cmd_bind_pipeline(cmd_buf, state->pipeline);
   ngf_cmd_viewport(cmd_buf, &viewport);
   ngf_cmd_scissor(cmd_buf, &viewport);
-  ngf_cmd_bind_descriptor_set(cmd_buf, state->desc_sets[0], 0u);
-  ngf_cmd_draw(cmd_buf, false, 0u, 3u, 1u); 
-  ngf_cmd_bind_descriptor_set(cmd_buf, state->desc_sets[1], 0u);
-  ngf_cmd_draw(cmd_buf, false, 0u, 3u, 1u); 
+  // Create and populate the descriptor sets.
+
+
+  for (uint32_t i = 0u; i < 2u; ++i) {
+    ngf_resource_bind_op bind_op;
+    bind_op.type = NGF_DESCRIPTOR_UNIFORM_BUFFER;
+    bind_op.target_set = 0u;
+    bind_op.target_binding = 0u;
+    bind_op.info.uniform_buffer.buffer = state->uniform_data[i].get();
+    bind_op.info.uniform_buffer.offset = 0u;
+    bind_op.info.uniform_buffer.range = sizeof(triangle_data);
+    ngf_cmd_bind_resources(cmd_buf, &bind_op, 1u);
+    ngf_cmd_draw(cmd_buf, false, 0u, 3u, 1u); 
+  }
   ngf_cmd_end_pass(cmd_buf);
   ngf_end_cmd_buffer(cmd_buf);
   ngf_submit_cmd_buffer(1u, &cmd_buf);

@@ -104,11 +104,6 @@ ngf_imgui::ngf_imgui() {
   err = projmtx_ubo_.initialize(projmtx_ubo_info);
   assert(err == NGF_ERROR_OK);
 
-  // Create a descriptor set.
-  err =
-      desc_set_.initialize(*pipeline_data.layout_info.descriptors_layouts[0]);
-  assert(err == NGF_ERROR_OK);
-
   // Create a sampler for the font texture.
   ngf_sampler_info sampler_info {
     NGF_FILTER_NEAREST,
@@ -123,35 +118,6 @@ ngf_imgui::ngf_imgui() {
     {0.0f, 0.0f, 0.0f, 0.0f},
   };
   tex_sampler_.initialize(sampler_info);
-
-  // Write the matrix UBO and texture+sampler into the descriptor set.
-  ngf_image_ref font_ref {
-    font_texture_.get(),
-    0u,
-    0u,
-    false
-  };
-
-  // Create and apply descriptor write operations.
-  ngf_descriptor_write writes[3];
-  writes[0].binding = 0u;
-  writes[0].type = NGF_DESCRIPTOR_UNIFORM_BUFFER;
-  writes[0].op.buffer_bind = ngf_descriptor_write_buffer {
-    projmtx_ubo_.get(), 0u, 16u * sizeof(float)
-  };
-  writes[1].binding = 1u;
-  writes[1].type = NGF_DESCRIPTOR_TEXTURE;
-  writes[1].op.image_sampler_bind = ngf_descriptor_write_image_sampler {
-    font_ref,
-    NULL,
-  };
-  writes[2].binding = 2u;
-  writes[2].type = NGF_DESCRIPTOR_SAMPLER;
-  writes[2].op.image_sampler_bind = ngf_descriptor_write_image_sampler {
-    font_ref,
-    tex_sampler_.get(),
-  };
-  ngf_apply_descriptor_writes(writes, 3u, desc_set_);
 
   ngf_plmd_destroy(pipeline_metadata, NULL);
 }
@@ -172,9 +138,36 @@ void ngf_imgui::record_rendering_commands(ngf_cmd_buffer *cmdbuf) {
 
   // Bind the ImGui rendering pipeline.
   ngf_cmd_bind_pipeline(cmdbuf, pipeline_);
-
-  // Bind the descriptor set with our resources.
-  ngf_cmd_bind_descriptor_set(cmdbuf, desc_set_.get(), 0u);
+  
+  // Bind resources.
+  ngf_image_ref font_ref {
+    font_texture_.get(),
+    0u,
+    0u,
+    false
+  };
+  ngf_resource_bind_op resource_binds[3];
+  resource_binds[0].target_binding = 0u;
+  resource_binds[0].target_set = 0u;
+  resource_binds[0].type = NGF_DESCRIPTOR_UNIFORM_BUFFER;
+  resource_binds[0].info.uniform_buffer = ngf_uniform_buffer_bind_info {
+    projmtx_ubo_.get(), 0u, 16u * sizeof(float)
+  };
+  resource_binds[1].target_binding = 1u;
+  resource_binds[1].target_set = 0u;
+  resource_binds[1].type = NGF_DESCRIPTOR_TEXTURE;
+  resource_binds[1].info.image_sampler = ngf_image_sampler_bind_info {
+    font_ref,
+    NULL,
+  };
+  resource_binds[2].target_binding = 2u;
+  resource_binds[2].target_set = 0u;
+  resource_binds[2].type = NGF_DESCRIPTOR_SAMPLER;
+  resource_binds[2].info.image_sampler = ngf_image_sampler_bind_info {
+    font_ref,
+    tex_sampler_.get(),
+  };
+  ngf_cmd_bind_resources(cmdbuf, resource_binds, 3u);
 
   // Set viewport.
   ngf_irect2d viewport_rect = {

@@ -40,11 +40,8 @@ struct app_state {
   ngf::graphics_pipeline pipeline;
   ngf::attrib_buffer vert_buffer;
   ngf::index_buffer index_buffer;
-  ngf::descriptor_set_layout desc_set_layout;
-  ngf::descriptor_set desc_set;
   ngf::uniform_buffer time_buffer;
   ngf::uniform_buffer aspect_ratio_buffer;
-  bool descriptors_written = false;
 };
 
 struct vertex_data {
@@ -118,12 +115,6 @@ init_result on_initialized(uintptr_t native_handle,
     {NGF_DESCRIPTOR_UNIFORM_BUFFER, 1u, NGF_DESCRIPTOR_VERTEX_STAGE_BIT},
   };
   err = ngf_util_create_simple_layout(descs, 2u, &pipeline_data.layout_info);
-  assert(err == NGF_ERROR_OK);
-  // Capture the descriptor set layout that was created for us automatically.
-  state->desc_set_layout.reset(
-      pipeline_data.layout_info.descriptors_layouts[0]);
-  // Create a new descriptor set with that layout.
-  err = state->desc_set.initialize(*state->desc_set_layout.get());
   assert(err == NGF_ERROR_OK);
   // Done configuring, initialize the pipeline.
   err = state->pipeline.initialize(pipe_info);
@@ -199,29 +190,27 @@ void on_frame(uint32_t w, uint32_t h, float time, void *userdata) {
   ngf_cmd_buffer_info cmd_info;
   ngf_create_cmd_buffer(&cmd_info, &cmd_buf);
   ngf_start_cmd_buffer(cmd_buf);
-  if (!state->descriptors_written) {
-    ngf_descriptor_write writes[2] = {
-      {
-        1u,
-        NGF_DESCRIPTOR_UNIFORM_BUFFER
-      },
-      {
-        0u,
-        NGF_DESCRIPTOR_UNIFORM_BUFFER
-      },
-    };
-    writes[0].op.buffer_bind.buffer = state->time_buffer.get();
-    writes[0].op.buffer_bind.offset = 0u;
-    writes[0].op.buffer_bind.range = sizeof(float);
-    writes[1].op.buffer_bind.buffer = state->aspect_ratio_buffer.get();
-    writes[1].op.buffer_bind.offset = 0u;
-    writes[1].op.buffer_bind.range = sizeof(float);
-    ngf_apply_descriptor_writes(writes, 2u, state->desc_set.get());
-    state->descriptors_written = true;
-  }
   ngf_cmd_begin_pass(cmd_buf, state->default_rt);
   ngf_cmd_bind_pipeline(cmd_buf, state->pipeline);
-  ngf_cmd_bind_descriptor_set(cmd_buf, state->desc_set.get(), 0u);
+  ngf_resource_bind_op bind_ops[2] = {
+    {
+      0u,
+      1u,
+      NGF_DESCRIPTOR_UNIFORM_BUFFER
+    },
+    {
+      0u,
+      0u,
+      NGF_DESCRIPTOR_UNIFORM_BUFFER
+    },
+  };
+  bind_ops[0].info.uniform_buffer.buffer = state->time_buffer.get();
+  bind_ops[0].info.uniform_buffer.offset = 0u;
+  bind_ops[0].info.uniform_buffer.range = sizeof(float);
+  bind_ops[1].info.uniform_buffer.buffer = state->aspect_ratio_buffer.get();
+  bind_ops[1].info.uniform_buffer.offset = 0u;
+  bind_ops[1].info.uniform_buffer.range = sizeof(float);
+  ngf_cmd_bind_resources(cmd_buf, bind_ops, 2u);
   ngf_cmd_bind_attrib_buffer(cmd_buf, state->vert_buffer, 0u, 0u);
   ngf_cmd_bind_index_buffer(cmd_buf, state->index_buffer, NGF_TYPE_UINT16);
   ngf_cmd_viewport(cmd_buf, &viewport);

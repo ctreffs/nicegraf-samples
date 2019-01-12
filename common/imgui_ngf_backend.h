@@ -18,7 +18,6 @@ private:
   ngf::graphics_pipeline pipeline_;
   ngf::uniform_buffer projmtx_ubo_;
   ngf::image font_texture_;
-  ngf::descriptor_set desc_set_;
   ngf::sampler tex_sampler_;
   ngf::attrib_buffer attrib_buffer_;
   ngf::index_buffer index_buffer_;
