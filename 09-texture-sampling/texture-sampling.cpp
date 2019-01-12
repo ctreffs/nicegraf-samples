@@ -178,12 +178,11 @@ void draw_textured_quad(const ngf_uniform_buffer *ubo,
 void on_frame(uint32_t w, uint32_t h, float, void *userdata) {
   static uint32_t old_w = 0u, old_h = 0u;
   app_state *state = (app_state*)userdata;
-  printf("bbbbb %zu\n", sizeof(uniform_data));
   if (old_w != w || old_h != h) {
     const uniform_data uniform_data[3] = {
       {512.0f / w, 512.0f / h, (512.0f - w)/float(w), (h - 512.0f) / float(h)},
-      {340.0f / w, 340.0f / h, 0.0f, (h - 340.0f) / float(h)},
-      {340.0f / w, 340.0f / h, 0.0f, (-340.0f) / float(h)},
+      {340.0f / w, 340.0f / h, (1364.0f - w)/float(w),(h - 340.0f) / float(h)},
+      {340.0f / w, 340.0f / h, (1364.0f - w)/float(w),(h - 1020.0f) / float(h)},
     };
     ngf_write_uniform_buffer(state->ubo, uniform_data, sizeof(uniform_data));
     old_w = w; old_h = h;
