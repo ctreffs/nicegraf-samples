@@ -103,7 +103,7 @@ init_result on_initialized(uintptr_t native_handle,
   const ngf_image_info img_info {
     NGF_IMAGE_TYPE_IMAGE_2D,
     img_size,
-    1u,
+    10u,
     NGF_IMAGE_FORMAT_RGBA8,
     0u,
     NGF_IMAGE_USAGE_SAMPLE_FROM
@@ -112,20 +112,17 @@ init_result on_initialized(uintptr_t native_handle,
   assert(err == NGF_ERROR_OK);
 
   // Populate image with data.
-  FILE *image = fopen("textures/LENA.DATA", "rb");
-  assert(image != NULL);
-  fseek(image, 0, SEEK_END);
-  const uint32_t image_data_size = (uint32_t)ftell(image);
-  fseek(image, 0, SEEK_SET);
-  uint8_t *image_data = new uint8_t[image_data_size];
-  size_t read_bytes = fread(image_data, 1, image_data_size, image);
-  assert(read_bytes == 512u * 512u * 4u);
-  fclose(image);
-  err = ngf_populate_image(state->image.get(), 0u, {0u, 0u, 0u},
-                           {512u, 512u, 1u}, image_data);
-  delete[] image_data;
-  assert(err == NGF_ERROR_OK);
-
+  char file_name[] = "textures/LENA0.DATA";
+  uint32_t w = 512u, h = 512u;
+  for (uint32_t mip_level = 0u;  mip_level < 9u; ++mip_level) {
+    snprintf(file_name, sizeof(file_name), "textures/LENA%d.DATA", mip_level);
+    std::vector<char> data = load_raw_data(file_name);
+    err = ngf_populate_image(state->image.get(), mip_level, {0u, 0u, 0u},
+                             {w, h, 1u}, data.data());
+    assert(err == NGF_ERROR_OK);
+    w = w >> 1; h = h >> 1;
+  }
+  
   // Create samplers.
   ngf_sampler_info samp_info {
     NGF_FILTER_LINEAR,
