@@ -18,6 +18,7 @@ SOFTWARE.
 */
 #pragma once
 
+#include <vector>
 #include <nicegraf.h>
 #include <nicegraf_wrappers.h>
 
@@ -27,6 +28,8 @@ ngf::shader_stage load_shader_stage(const char *root_name,
 plmd* load_pipeline_metadata(const char *name);
 
 ngf::context create_default_context(uintptr_t handle, uint32_t w, uint32_t h);
+
+std::vector<char> load_raw_data(const char *file_path);
 
 struct init_result {
   ngf::context context;

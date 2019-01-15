@@ -165,7 +165,7 @@ ngf::shader_stage load_shader_stage(const char *root_name,
   std::string file_name =
       "shaders/generated/" + std::string(root_name) + "." + stage_names[type] +
        SHADER_EXTENSION;
-  std::ifstream fs(file_name);
+  std::ifstream fs(file_name, std::ios::binary | std::ios::in);
   std::vector<char> content((std::istreambuf_iterator<char>(fs)),
                        std::istreambuf_iterator<char>());
   ngf_shader_stage_info stage_info;
@@ -182,11 +182,9 @@ ngf::shader_stage load_shader_stage(const char *root_name,
 }
 
 plmd* load_pipeline_metadata(const char *name) {
-   std::string file_name =
+  std::string file_name =
       "shaders/generated/" + std::string(name) + ".pipeline";
-  std::ifstream fs(file_name);
-  std::vector<char> content((std::istreambuf_iterator<char>(fs)),
-                             std::istreambuf_iterator<char>()); 
+  std::vector<char> content = load_raw_data(file_name.c_str());
   plmd *m;
   ngf_plmd_error err = ngf_plmd_load(content.data(), content.size(), NULL, &m);
   assert(err == NGF_PLMD_ERROR_OK);
@@ -228,4 +226,12 @@ ngf::context create_default_context(uintptr_t handle, uint32_t w, uint32_t h) {
 #endif
 
   return nicegraf_context;
+}
+
+
+std::vector<char> load_raw_data(const char *file_path) {
+  std::ifstream fs(file_path, std::ios::binary);
+  std::vector<char> content((std::istreambuf_iterator<char>(fs)),
+                             std::istreambuf_iterator<char>());
+  return content;
 }
