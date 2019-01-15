@@ -34,6 +34,7 @@ struct app_state {
   ngf::graphics_pipeline pipeline;
   ngf::image image;
   ngf::sampler bilinear_sampler;
+  ngf::sampler trilinear_sampler;
   ngf::sampler nearest_sampler;
   ngf::uniform_buffer ubo;
 };
@@ -141,10 +142,14 @@ init_result on_initialized(uintptr_t native_handle,
   samp_info.min_filter = samp_info.mag_filter = NGF_FILTER_NEAREST;
   err = state->nearest_sampler.initialize(samp_info);
   assert(err == NGF_ERROR_OK);
+  samp_info.min_filter = samp_info.mag_filter = NGF_FILTER_LINEAR;
+  samp_info.lod_max = 9.0f;
+  err = state->trilinear_sampler.initialize(samp_info);
+  assert(err == NGF_ERROR_OK);
 
   // Create the uniform buffer.
   ngf_uniform_buffer_info ubo_info = {
-    sizeof(uniform_data) * 3u
+    sizeof(uniform_data) * 4u
   };
   err = state->ubo.initialize(ubo_info);
   assert(err == NGF_ERROR_OK);
@@ -176,10 +181,11 @@ void on_frame(uint32_t w, uint32_t h, float, void *userdata) {
   static uint32_t old_w = 0u, old_h = 0u;
   app_state *state = (app_state*)userdata;
   if (old_w != w || old_h != h) {
-    const uniform_data uniform_data[3] = {
+    const uniform_data uniform_data[4] = {
       {512.0f / w, 512.0f / h, (512.0f - w)/float(w), (h - 512.0f) / float(h)},
       {340.0f / w, 340.0f / h, (1364.0f - w)/float(w),(h - 340.0f) / float(h)},
-      {340.0f / w, 340.0f / h, (1364.0f - w)/float(w),(h - 1020.0f) / float(h)},
+      {340.0f / w, 340.0f / h, (2044.0f - w)/float(w),(h - 340.0f) / float(h)},
+      {340.0f / w, 340.0f / h, (2724.0f - w)/float(w),(h - 340.0f) / float(h)},
     };
     ngf_write_uniform_buffer(state->ubo, uniform_data, sizeof(uniform_data));
     old_w = w; old_h = h;
@@ -200,8 +206,9 @@ void on_frame(uint32_t w, uint32_t h, float, void *userdata) {
   texture_bind_op.info.image_sampler.image_subresource.image = state->image;
   ngf_cmd_bind_resources(cmd_buf, &texture_bind_op, 1u);
   draw_textured_quad(state->ubo, 0, state->nearest_sampler, cmd_buf);
-  draw_textured_quad(state->ubo, 1, state->bilinear_sampler, cmd_buf);
-  draw_textured_quad(state->ubo, 2, state->nearest_sampler, cmd_buf);
+  draw_textured_quad(state->ubo, 1, state->nearest_sampler, cmd_buf);
+  draw_textured_quad(state->ubo, 2, state->bilinear_sampler, cmd_buf);
+  draw_textured_quad(state->ubo, 3, state->trilinear_sampler, cmd_buf);
   ngf_cmd_end_pass(cmd_buf);
   ngf_end_cmd_buffer(cmd_buf);
   ngf_submit_cmd_buffer(1u, &cmd_buf);
