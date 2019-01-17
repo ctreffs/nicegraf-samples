@@ -166,6 +166,7 @@ ngf::shader_stage load_shader_stage(const char *root_name,
       "shaders/generated/" + std::string(root_name) + "." + stage_names[type] +
        SHADER_EXTENSION;
   std::ifstream fs(file_name, std::ios::binary | std::ios::in);
+  assert(fs.is_open());
   std::vector<char> content((std::istreambuf_iterator<char>(fs)),
                        std::istreambuf_iterator<char>());
   ngf_shader_stage_info stage_info;
