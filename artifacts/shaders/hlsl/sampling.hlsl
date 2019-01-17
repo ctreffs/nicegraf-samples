@@ -6,8 +6,7 @@ struct PixelShaderInput {
 };
 
 [vk::binding(0, 1)] cbuffer UniformData {
-  float2 u_Scale;
-  float2 u_Offset;
+  float4x4 u_TransformMatrix;
 };
 
 PixelShaderInput VSMain(uint vid : SV_VertexID) {
@@ -15,10 +14,13 @@ PixelShaderInput VSMain(uint vid : SV_VertexID) {
     float2(1.0, 1.0), float2(-1.0, 1.0), float2(1.0, -1.0),
     float2(1.0, -1.0), float2(-1.0, 1.0), float2(-1.0, -1.0)
   };
-  float2 position = vertices[vid % 6];
+  const float2 uvs[] = {
+    float2(1.0, 1.0), float2(0.0, 1.0), float2(1.0, 0.0),
+    float2(1.0, 0.0), float2(0.0, 1.0), float2(0.0, 0.0)
+  };
   PixelShaderInput result = {
-    float4(position * u_Scale + u_Offset, 0.0, 1.0),
-    position * 0.5 + 0.5
+    u_TransformMatrix * float4(vertices[vid % 6], 0.0, 1.0),
+    2 * uvs[vid %6]
   };
   return result;
 }
@@ -27,5 +29,5 @@ PixelShaderInput VSMain(uint vid : SV_VertexID) {
 [vk::binding(1, 1)] uniform sampler   smp;
 
 float4 PSMain(PixelShaderInput input) : SV_TARGET {
-  return tex.Sample(smp, input.uv);
+  return pow(tex.Sample(smp, input.uv), 1.0/2.2);
 }
