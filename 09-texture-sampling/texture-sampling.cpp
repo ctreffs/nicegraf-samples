@@ -20,7 +20,7 @@ SOFTWARE.
 #include "common.h"
 #include "imgui.h"
 #define MATH_3D_IMPLEMENTATION
-#include "math_3d.h"
+#include  "math_3d.h"
 #include <nicegraf.h>
 #include <nicegraf_util.h>
 #include <nicegraf_wrappers.h>
@@ -136,14 +136,16 @@ init_result on_initialized(uintptr_t native_handle,
   ngf_sampler_info samp_info {
     NGF_FILTER_LINEAR,
     NGF_FILTER_LINEAR,
-    NGF_FILTER_NEAREST,
+    NGF_FILTER_LINEAR,
     NGF_WRAP_MODE_REPEAT,
     NGF_WRAP_MODE_REPEAT,
     NGF_WRAP_MODE_REPEAT,
     0.0f,
     0.0f,
     0.0f,
-    {0.0f}
+    {0.0f},
+    1.0f,
+    false
   };
   err = state->bilinear_sampler.initialize(samp_info);
   assert(err == NGF_ERROR_OK);
