@@ -140,8 +140,8 @@ init_result on_initialized(uintptr_t native_handle,
   uint16_t indices[3u * 6u];
   for (uint16_t t = 0u; t < 6u; ++t) {
     indices[3u*t + 0u] =  0;
-    indices[3u*t + 1u] = (t + 1u) % 7u;
-    indices[3u*t + 2u] = (t + 2u >= 7u) ? 1u : (t + 2u);
+    indices[3u*t + 1u] = (uint16_t)((t + 1u) % 7u);
+    indices[3u*t + 2u] = (uint16_t)((t + 2u >= 7u) ? 1u : (t + 2u));
   }
   // Create index data buffer.
   ngf_index_buffer_info idx_buf_info {
