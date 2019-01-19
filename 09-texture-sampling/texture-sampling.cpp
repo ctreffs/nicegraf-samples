@@ -208,7 +208,7 @@ void on_frame(uint32_t w, uint32_t h, float, void *userdata) {
                                state->perspective_matrix);
   uniform_data ubo_data[4];
   for (uint32_t i = 0u; i < sizeof(ubo_data)/sizeof(uniform_data); ++i) {
-    const vec3_t origin = vec3(-3.0f + i * 2.0f, 0.0f, 0.0f);
+    const vec3_t origin = vec3(-3.0f + (float)i * 2.0f, 0.0f, 0.0f);
     const mat4_t model = m4_mul(m4_scaling(vec3(0.99f, 0.99f, 0.99f)),
                                 m4_translation(origin));
     ubo_data[i].transform_matrix = m4_mul(model, camera);
