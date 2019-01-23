@@ -120,6 +120,7 @@ int main(int, char **) {
       on_frame((uint32_t)old_win_width, (uint32_t)old_win_height,
                 (float)glfwGetTime(),
                 init_data.userdata);
+#if !defined(NGF_NO_IMGUI)
       // Give application a chance to submit its UI drawing commands.
       // TODO: make toggleable.
       ImGui::GetIO().DisplaySize.x = (float)new_win_width;
@@ -137,7 +138,7 @@ int main(int, char **) {
       ngf_end_cmd_buffer(uibuf);
       ngf_cmd_buffer *b = uibuf.get();
       ngf_submit_cmd_buffer(1u, &b);
-
+#endif
       // End frame.
       ngf_end_frame(init_data.context);
     }

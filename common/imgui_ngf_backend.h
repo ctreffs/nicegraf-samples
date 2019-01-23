@@ -15,6 +15,7 @@ public:
   void record_rendering_commands(ngf_cmd_buffer *cmdbuf);
 
 private:
+#if !defined(NGF_NO_IMGUI)
   ngf::graphics_pipeline pipeline_;
   ngf::uniform_buffer projmtx_ubo_;
   ngf::image font_texture_;
@@ -24,4 +25,5 @@ private:
   ngf::shader_stage vertex_stage_;
   ngf::shader_stage fragment_stage_;
   ngf::render_target default_rt_;
+#endif
 };

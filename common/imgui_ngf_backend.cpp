@@ -5,6 +5,7 @@
 #include <vector>
 
 ngf_imgui::ngf_imgui() {
+#if !defined(NGF_NO_IMGUI)
   vertex_stage_ = load_shader_stage("imgui", "VSMain", NGF_STAGE_VERTEX);
   fragment_stage_ = load_shader_stage("imgui", "PSMain", NGF_STAGE_FRAGMENT);
 
@@ -122,8 +123,10 @@ ngf_imgui::ngf_imgui() {
   tex_sampler_.initialize(sampler_info);
 
   ngf_plmd_destroy(pipeline_metadata, NULL);
+#endif
 }
 
+#if !defined(NGF_NO_IMGUI)
 void ngf_imgui::record_rendering_commands(ngf_cmd_buffer *cmdbuf) {
   ImGui::Render();
   ImDrawData *data = ImGui::GetDrawData();
@@ -289,3 +292,7 @@ void ngf_imgui::record_rendering_commands(ngf_cmd_buffer *cmdbuf) {
     ngf_cmd_draw(cmdbuf, true, draw.first_elem, draw.nelem, 1u);
   }
 }
+#else
+void ngf_imgui::record_rendering_commands(ngf_cmd_buffer*) {}
+#endif
+
