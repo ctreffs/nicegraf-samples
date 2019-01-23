@@ -50,7 +50,7 @@ add_library(imgui
 target_include_directories(imgui PUBLIC
   ${CMAKE_CURRENT_LIST_DIR}/third_party/imgui)
 
-target_compile_options(imgui PRIVATE ${COMMON_COMPILE_OPTS})
+target_compile_options(imgui PRIVATE "--std=c++14")
 
 target_link_libraries(imgui glfw)
   
@@ -82,7 +82,7 @@ target_link_libraries(common glfw imgui nicegraf nicegraf_util)
 if(WIN32)
   set(NGF_OPENGL_LIB "opengl32.lib")
 elseif(UNIX AND NOT APPLE)
-  set(NGF_OPENGL_LIB "gl")
+  set(NGF_OPENGL_LIB "GL")
 endif()
 
 function(set_output_dir target dir)
