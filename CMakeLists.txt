@@ -135,6 +135,7 @@ function (add_sample number name)
   add_dependencies(${SAMPLE} generated_shaders)
   set_output_dir(${SAMPLE} "${CMAKE_CURRENT_LIST_DIR}/artifacts")
   set_target_properties(${SAMPLE} PROPERTIES PDB_OUTPUT_DIRECTORY "${CMAKE_CURRENT_LIST_DIR}/build")
+  set_target_properties(${SAMPLE} PROPERTIES VS_DEBUGGER_WORKING_DIRECTORY "${CMAKE_CURRENT_LIST_DIR}/artifacts")
 endfunction(add_sample)
 
 add_sample("00" "imgui")
