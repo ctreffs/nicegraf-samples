@@ -24,8 +24,10 @@ SOFTWARE.
 
 ngf::shader_stage load_shader_stage(const char *root_name,
                                     const char *entry_point_name,
-                                    ngf_stage_type type);
-plmd* load_pipeline_metadata(const char *name);
+                                    ngf_stage_type type,
+                                    const char *prefix = "shaders/generated/");
+plmd* load_pipeline_metadata(const char *name,
+                             const char *prefix = "shaders/generated/");
 
 ngf::context create_default_context(uintptr_t handle, uint32_t w, uint32_t h);
 

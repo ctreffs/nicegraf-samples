@@ -16,6 +16,7 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
+#define _CRT_SECURE_NO_WARNINGS
 #include <GLFW/glfw3.h>
 #if defined(_WIN32) || defined(_WIN64)
 #define GLFW_EXPOSE_NATIVE_WIN32
@@ -56,7 +57,7 @@ int main(int, char **) {
  
   // Initialize nicegraf.
   ngf_error err = ngf_initialize(NGF_DEVICE_PREFERENCE_DONTCARE);
-  assert(err == NGF_ERROR_OK);
+  assert(err == NGF_ERROR_OK);err = NGF_ERROR_OK;
 
   // Tell GLFW not to attempt to create an API context (nicegraf does it for
   // us).
@@ -97,7 +98,7 @@ int main(int, char **) {
 
   // Obtain the default render target.
   ngf_render_target *defaultrt = nullptr;
-  ngf_default_render_target(NGF_LOAD_OP_KEEP,
+  ngf_default_render_target(NGF_LOAD_OP_DONTCARE,
                             NGF_LOAD_OP_DONTCARE,
                             NULL,
                             NULL,
@@ -159,12 +160,13 @@ int main(int, char **) {
 
 ngf::shader_stage load_shader_stage(const char *root_name,
                                     const char *entry_point_name,
-                                    ngf_stage_type type) {
+                                    ngf_stage_type type,
+                                    const char *prefix) {
   static const char *stage_names[] = {
     "vs", "ps"
   };
   std::string file_name =
-      "shaders/generated/" + std::string(root_name) + "." + stage_names[type] +
+       prefix + std::string(root_name) + "." + stage_names[type] +
        SHADER_EXTENSION;
   std::ifstream fs(file_name, std::ios::binary | std::ios::in);
   assert(fs.is_open());
@@ -179,17 +181,16 @@ ngf::shader_stage load_shader_stage(const char *root_name,
   stage_info.entry_point_name = entry_point_name;
   ngf::shader_stage stage;
   ngf_error err = stage.initialize(stage_info);
-  assert(err == NGF_ERROR_OK);
+  assert(err == NGF_ERROR_OK); err = NGF_ERROR_OK;
   return stage;
 }
 
-plmd* load_pipeline_metadata(const char *name) {
-  std::string file_name =
-      "shaders/generated/" + std::string(name) + ".pipeline";
+plmd* load_pipeline_metadata(const char *name, const char *prefix) {
+  std::string file_name = prefix + std::string(name) + ".pipeline";
   std::vector<char> content = load_raw_data(file_name.c_str());
   plmd *m;
   ngf_plmd_error err = ngf_plmd_load(content.data(), content.size(), NULL, &m);
-  assert(err == NGF_PLMD_ERROR_OK);
+  assert(err == NGF_PLMD_ERROR_OK); err = NGF_PLMD_ERROR_OK;
   return m;
 }
 
@@ -197,7 +198,7 @@ ngf::context create_default_context(uintptr_t handle, uint32_t w, uint32_t h) {
   // Create a nicegraf context.
   ngf_swapchain_info swapchain_info = {
     NGF_IMAGE_FORMAT_BGRA8, // color format
-    NGF_IMAGE_FORMAT_UNDEFINED, // depth format (none)
+    NGF_IMAGE_FORMAT_DEPTH24_STENCIL8, // depth format (24bit)
     8u, // MSAA 8x
     2u, // swapchain capacity hint
     w, // swapchain image width
@@ -224,7 +225,7 @@ ngf::context create_default_context(uintptr_t handle, uint32_t w, uint32_t h) {
 
 #if !defined(NDEBUG)
   // Install debug message callback in debug mode only.
-  ngf_debug_message_callback(nullptr, debugmsg_cb);
+ // ngf_debug_message_callback(nullptr, debugmsg_cb);
 #endif
 
   return nicegraf_context;
