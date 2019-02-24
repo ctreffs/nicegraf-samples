@@ -176,18 +176,13 @@ void draw_textured_quad(const ngf_uniform_buffer *ubo,
                         size_t buffer_offset,
                         const ngf_sampler *sampler,
                         ngf_cmd_buffer *cmd_buf) {
-  ngf_resource_bind_op bind_ops[2];
-  bind_ops[0].type = NGF_DESCRIPTOR_SAMPLER;
-  bind_ops[0].target_set = 1u;
-  bind_ops[0].target_binding = 1u;
-  bind_ops[0].info.image_sampler.sampler = sampler;
-  bind_ops[1].type = NGF_DESCRIPTOR_UNIFORM_BUFFER;
-  bind_ops[1].target_set = 1u;
-  bind_ops[1].target_binding = 0u;
-  bind_ops[1].info.uniform_buffer.buffer = ubo;
-  bind_ops[1].info.uniform_buffer.offset = buffer_offset * sizeof(uniform_data);
-  bind_ops[1].info.uniform_buffer.range= sizeof(uniform_data);
-  ngf_cmd_bind_resources(cmd_buf, bind_ops, 2u);
+  ngf::cmd_bind_resources(cmd_buf,
+                         ngf::descriptor_set<1>::binding<1>::sampler(sampler),
+                         ngf::descriptor_set<1>::binding<0>::uniform_buffer(
+                             ubo,
+                             buffer_offset * sizeof(uniform_data),
+                             sizeof(uniform_data)));
+                         
   ngf_cmd_draw(cmd_buf, false, 0u, 6u, 1u);
 }
 
@@ -226,12 +221,9 @@ void on_frame(uint32_t w, uint32_t h, float, void *userdata) {
   ngf_cmd_bind_pipeline(cmd_buf, state->pipeline);
   ngf_cmd_viewport(cmd_buf, &viewport);
   ngf_cmd_scissor(cmd_buf, &viewport);
-  ngf_resource_bind_op texture_bind_op;
-  texture_bind_op.type = NGF_DESCRIPTOR_TEXTURE;
-  texture_bind_op.target_set = 0u;
-  texture_bind_op.target_binding = 0u;
-  texture_bind_op.info.image_sampler.image_subresource.image = state->image;
-  ngf_cmd_bind_resources(cmd_buf, &texture_bind_op, 1u);
+  ngf::cmd_bind_resources(
+      cmd_buf,
+      ngf::descriptor_set<0>::binding<0>::texture(state->image));
   draw_textured_quad(state->ubo, 0, state->nearest_sampler, cmd_buf);
   draw_textured_quad(state->ubo, 1, state->bilinear_sampler, cmd_buf);
   draw_textured_quad(state->ubo, 2, state->trilinear_sampler, cmd_buf);
