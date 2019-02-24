@@ -106,7 +106,7 @@ init_result on_initialized(uintptr_t native_handle,
   assert(err == NGF_ERROR_OK);
 
   // Populate image with data.
-  FILE *image = fopen("textures/LENA.DATA", "rb");
+  FILE *image = fopen("textures/LENA0.DATA", "rb");
   assert(image != NULL);
   fseek(image, 0, SEEK_END);
   const uint32_t image_data_size = (uint32_t)ftell(image);
