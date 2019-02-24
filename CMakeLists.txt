@@ -33,6 +33,8 @@ else()
   set(EXECUTABLE_SUFFIX "")
 endif()
 
+add_definitions(-DNGF_NO_IMGUI)
+
 add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/nicegraf)
 add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/nicegraf-shaderc)
 set(GLFW_BUILD_DOCS OFF CACHE BOOL "" FORCE)
@@ -54,6 +56,17 @@ target_compile_options(imgui PRIVATE "--std=c++14")
 
 target_link_libraries(imgui glfw)
   
+add_library(imgui_editor 
+  ${CMAKE_CURRENT_LIST_DIR}/third_party/ImGuiColorTextEdit/TextEditor.cpp
+  ${CMAKE_CURRENT_LIST_DIR}/third_party/ImGuiColorTextEdit/TextEditor.h
+)
+
+target_include_directories(imgui_editor PUBLIC
+  ${CMAKE_CURRENT_LIST_DIR}/third_party/ImGuiColorTextEdit
+)
+
+target_link_libraries(imgui_editor imgui)
+
 set(NGF_SAMPLES_COMMON_SOURCES
   ${CMAKE_CURRENT_LIST_DIR}/common/common.cpp
   ${CMAKE_CURRENT_LIST_DIR}/common/common.h
@@ -77,7 +90,7 @@ target_include_directories(common PUBLIC
 target_compile_options(common PRIVATE ${COMMON_COMPILE_OPTS})
 
 
-target_link_libraries(common glfw imgui nicegraf nicegraf_util)
+target_link_libraries(common glfw imgui imgui_editor nicegraf nicegraf_util)
 
 if(WIN32)
   set(NGF_OPENGL_LIB "opengl32.lib")
@@ -118,7 +131,7 @@ foreach(source_path ${shader_files})
     add_custom_command(OUTPUT ${output_files_list}
                        MAIN_DEPENDENCY ${source_path}
                        DEPENDS nicegraf_shaderc
-                       COMMAND ${CMAKE_CURRENT_LIST_DIR}/nicegraf-shaderc/nicegraf_shaderc${EXECUTABLE_SUFFIX} ARGS ${source_path} "-t" "gl430" "-t" "msl12" "-O" "../generated/"
+                       COMMAND ${CMAKE_CURRENT_LIST_DIR}/nicegraf-shaderc/nicegraf_shaderc${EXECUTABLE_SUFFIX} ARGS ${source_path} "-t" "gl430" "-t" "msl12" "-t" "spv" "-O" "../generated/"
                        WORKING_DIRECTORY ${CMAKE_CURRENT_LIST_DIR}/artifacts/shaders/hlsl)
     set(generated_shaders_list "${output_files_list};${generated_shaders_list}")
   endif()
@@ -148,3 +161,5 @@ add_sample("06" "depth")
 add_sample("07" "simple-texture")
 add_sample("08" "render-to-texture")
 add_sample("09" "texture-sampling")
+add_sample("0a" "instancing")
+add_sample("0b" "shader-editor")
