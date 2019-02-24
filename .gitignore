@@ -2,6 +2,7 @@
 artifacts/*.exe
 artifacts/imgui.ini
 artifacts/imgui_log.txt
+artifacts/live.*
 artifacts/*.exe
 artifacts/*.ilk
 build/*
