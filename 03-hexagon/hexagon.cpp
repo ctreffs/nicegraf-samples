@@ -111,38 +111,6 @@ init_result on_initialized(uintptr_t native_handle,
   err = state->pipeline.initialize(pipe_info);
   assert(err == NGF_ERROR_OK);
 
-  // Populate vertex buffer with data.
-  vertex_data vertices[3u * 6u] = {
-      {  // First vertex is the center of the hexagon.
-          {0.0f, 0.0f},
-          {1.0f, 1.0f, 1.0f}
-      }
-  };
-  for (uint32_t t = 0u; t < 6u; ++t) {
-    for (uint32_t v = 0u; v < 3u; ++v) {
-      vertex_data &vertex = vertices[3u * t + v];
-      if (v == 0) {
-        memcpy(vertex.position, vertices[0].position, sizeof(float) * 2u);
-      } else {
-        uint32_t i = v - 1u;
-        vertex.position[0] = 0.5f * (float)cos((t + i) * TAU / 6.0f);
-        vertex.position[1] = 0.5f * (float)sin((t + i) * TAU / 6.0f);
-      }
-      vertex.color[0] = 0.5f*(vertex.position[0] + 1.0f);
-      vertex.color[1] = 0.5f*(vertex.position[1] + 1.0f);
-      vertex.color[2] = 1.0f - vertex.position[0];
-    }
-  }
-  // Create the vertex data buffer.
-  ngf_attrib_buffer_info buf_info {
-    sizeof(vertices),
-    vertices,
-    NULL, NULL,
-    NGF_VERTEX_DATA_USAGE_STATIC
-  };
-  err = state->vert_buffer.initialize(buf_info);
-  assert(err == NGF_ERROR_OK);
-
   return { std::move(ctx), state};
 }
 
@@ -154,6 +122,40 @@ void on_frame(uint32_t w, uint32_t h, float, void *userdata) {
   ngf_cmd_buffer_info cmd_info;
   ngf_create_cmd_buffer(&cmd_info, &cmd_buf);
   ngf_start_cmd_buffer(cmd_buf);
+  if (state->vert_buffer.get() == nullptr) {
+    // Populate vertex buffer with data.
+    vertex_data vertices[3u * 6u] = {
+        {  // First vertex is the center of the hexagon.
+            {0.0f, 0.0f},
+            {1.0f, 1.0f, 1.0f}
+        }
+    };
+    for (uint32_t t = 0u; t < 6u; ++t) {
+      for (uint32_t v = 0u; v < 3u; ++v) {
+        vertex_data &vertex = vertices[3u * t + v];
+        if (v == 0) {
+          memcpy(vertex.position, vertices[0].position, sizeof(float) * 2u);
+        } else {
+          uint32_t i = v - 1u;
+          vertex.position[0] = 0.5f * (float)cos((t + i) * TAU / 6.0f);
+          vertex.position[1] = 0.5f * (float)sin((t + i) * TAU / 6.0f);
+        }
+        vertex.color[0] = 0.5f*(vertex.position[0] + 1.0f);
+        vertex.color[1] = 0.5f*(vertex.position[1] + 1.0f);
+        vertex.color[2] = 1.0f - vertex.position[0];
+      }
+    }
+    // Create the vertex data buffer.
+    ngf_attrib_buffer_info buf_info {
+      sizeof(vertices),
+      vertices,
+      NULL, NULL,
+      NGF_VERTEX_DATA_USAGE_STATIC,
+      cmd_buf
+    };
+    ngf_error err = state->vert_buffer.initialize(buf_info);
+    assert(err == NGF_ERROR_OK);
+  }
   ngf_cmd_begin_pass(cmd_buf, state->default_rt);
   ngf_cmd_bind_pipeline(cmd_buf, state->pipeline);
   ngf_cmd_bind_attrib_buffer(cmd_buf, state->vert_buffer, 0u, 0u);
