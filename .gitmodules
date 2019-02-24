@@ -10,3 +10,6 @@
 [submodule "nicegraf-shaderc"]
 	path = nicegraf-shaderc
 	url = https://github.com/nicebyte/nicegraf-shaderc
+[submodule "third_party/ImGuiColorTextEdit"]
+	path = third_party/ImGuiColorTextEdit
+	url = https://github.com/BalazsJako/ImGuiColorTextEdit
