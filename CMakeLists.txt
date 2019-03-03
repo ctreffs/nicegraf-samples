@@ -67,6 +67,8 @@ target_include_directories(imgui_editor PUBLIC
 
 target_link_libraries(imgui_editor imgui)
 
+target_compile_options(imgui_editor PRIVATE "--std=c++14")
+
 set(NGF_SAMPLES_COMMON_SOURCES
   ${CMAKE_CURRENT_LIST_DIR}/common/common.cpp
   ${CMAKE_CURRENT_LIST_DIR}/common/common.h
