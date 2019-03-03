@@ -1,21 +1,24 @@
 /**
-Copyright (c) 2018 nicegraf contributors
-Permission is hereby granted, free of charge, to any person obtaining a copy of
-this software and associated documentation files (the "Software"), to deal in
-the Software without restriction, including without limitation the rights to
-use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of
-the Software, and to permit persons to whom the Software is furnished to do so,
-subject to the following conditions:
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
-*/
+ * Copyright (c) 2019 nicegraf contributors
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy 
+ * of this software and associated documentation files (the "Software"), to
+ * deal in the Software without restriction, including without limitation the
+ * rights to use, copy, modify, merge, publish, distribute, sublicense, and/or
+ * sell copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+ * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
+ * IN THE SOFTWARE.
+ */
 
 #include "common.h"
 #include <nicegraf.h>
@@ -38,7 +41,9 @@ struct app_state {
   ngf::shader_stage vert_stage;
   ngf::shader_stage frag_stage;
   ngf::graphics_pipeline pipeline;
+  ngf::attrib_buffer vert_buffer_staging;
   ngf::attrib_buffer vert_buffer;
+  bool vert_buffer_uploaded = false;
 };
 
 struct vertex_data {
@@ -122,7 +127,10 @@ void on_frame(uint32_t w, uint32_t h, float, void *userdata) {
   ngf_cmd_buffer_info cmd_info;
   ngf_create_cmd_buffer(&cmd_info, &cmd_buf);
   ngf_start_cmd_buffer(cmd_buf);
-  if (state->vert_buffer.get() == nullptr) {
+  if (state->vert_buffer_uploaded && state->vert_buffer_staging.get()) {
+    state->vert_buffer_staging.reset(nullptr);
+  } else if (!state->vert_buffer_uploaded &&
+              state->vert_buffer.get() == nullptr) {
     // Populate vertex buffer with data.
     vertex_data vertices[3u * 6u] = {
         {  // First vertex is the center of the hexagon.
@@ -145,16 +153,31 @@ void on_frame(uint32_t w, uint32_t h, float, void *userdata) {
         vertex.color[2] = 1.0f - vertex.position[0];
       }
     }
-    // Create the vertex data buffer.
-    ngf_attrib_buffer_info buf_info {
+    ngf_buffer_info staging_buf_info {
       sizeof(vertices),
-      vertices,
-      NULL, NULL,
-      NGF_VERTEX_DATA_USAGE_STATIC,
-      cmd_buf
+      NGF_BUFFER_STORAGE_HOST_WRITEABLE
     };
-    ngf_error err = state->vert_buffer.initialize(buf_info);
+    ngf_buffer_info buf_info{
+      sizeof(vertices),
+      NGF_BUFFER_STORAGE_PRIVATE
+    };
+    ngf_attrib_buffer *staging_buffer = nullptr, *buffer = nullptr;
+    ngf_error err =
+        ngf_create_attrib_buffer2(&staging_buf_info, &staging_buffer);
     assert(err == NGF_ERROR_OK);
+    void *mapped_buf = ngf_attrib_buffer_map_range(staging_buffer, 0,
+                                                   sizeof(vertices),
+                                                   NGF_BUFFER_MAP_WRITE_BIT);
+    memcpy(mapped_buf, &vertices, sizeof(vertices));
+    ngf_attrib_buffer_flush_range(staging_buffer, 0, sizeof(vertices));
+    ngf_attrib_buffer_unmap(staging_buffer);
+    state->vert_buffer_staging.reset(staging_buffer);
+    err = ngf_create_attrib_buffer2(&buf_info, &buffer);
+    assert(err == NGF_ERROR_OK);
+    state->vert_buffer.reset(buffer);
+    ngf_cmd_copy_attrib_buffer(cmd_buf, staging_buffer, buffer,
+                               sizeof(vertices), 0u, 0u);
+    state->vert_buffer_uploaded = true;
   }
   ngf_cmd_begin_pass(cmd_buf, state->default_rt);
   ngf_cmd_bind_pipeline(cmd_buf, state->pipeline);
