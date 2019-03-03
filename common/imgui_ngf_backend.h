@@ -15,9 +15,13 @@ public:
   void record_rendering_commands(ngf_cmd_buffer *cmdbuf);
 
 private:
+  struct uniform_data {
+    float ortho_projection[4][4];
+  };
+
 #if !defined(NGF_NO_IMGUI)
   ngf::graphics_pipeline pipeline_;
-  ngf::uniform_buffer projmtx_ubo_;
+  ngf::streamed_uniform<uniform_data> uniform_data_;
   ngf::image font_texture_;
   ngf::sampler tex_sampler_;
   ngf::attrib_buffer attrib_buffer_;

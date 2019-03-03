@@ -33,7 +33,7 @@ else()
   set(EXECUTABLE_SUFFIX "")
 endif()
 
-add_definitions(-DNGF_NO_IMGUI)
+# add_definitions(-DNGF_NO_IMGUI)
 
 add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/nicegraf)
 add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/nicegraf-shaderc)

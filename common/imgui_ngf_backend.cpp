@@ -4,7 +4,7 @@
 #include <assert.h>
 #include <vector>
 
-ngf_imgui::ngf_imgui() {
+ngf_imgui::ngf_imgui() : uniform_data_(3) {
 #if !defined(NGF_NO_IMGUI)
   vertex_stage_ = load_shader_stage("imgui", "VSMain", NGF_STAGE_VERTEX);
   fragment_stage_ = load_shader_stage("imgui", "PSMain", NGF_STAGE_FRAGMENT);
@@ -98,13 +98,6 @@ ngf_imgui::ngf_imgui() {
   assert(err == NGF_ERROR_OK);
   ImGui::GetIO().Fonts->TexID = (ImTextureID)(uintptr_t)font_texture_.get();
 
-  // Allocate UBO for projection matrix.
-  ngf_uniform_buffer_info projmtx_ubo_info = {
-    sizeof(float) * 16u
-  };
-  err = projmtx_ubo_.initialize(projmtx_ubo_info);
-  assert(err == NGF_ERROR_OK);
-
   // Create a sampler for the font texture.
   ngf_sampler_info sampler_info {
     NGF_FILTER_NEAREST,
@@ -140,39 +133,32 @@ void ngf_imgui::record_rendering_commands(ngf_cmd_buffer *cmdbuf) {
 
   // Avoid rendering when minimized.
   if (fb_width <= 0 || fb_height <= 0) { return; }
+   
+  // Build projection matrix.
+  const ImVec2 &pos = data->DisplayPos;
+  const float L = pos.x;
+  const float R = pos.x + data->DisplaySize.x;
+  const float T = pos.y;
+  const float B = pos.y + data->DisplaySize.y;
+  const uniform_data ortho_projection = {
+    {
+        { 2.0f/(R-L),   0.0f,         0.0f,   0.0f },
+        { 0.0f,         2.0f/(T-B),   0.0f,   0.0f },
+        { 0.0f,         0.0f,        -1.0f,   0.0f },
+        { (R+L)/(L-R),  (T+B)/(B-T),  0.0f,   1.0f },
+    }
+  };
+  uniform_data_.write(ortho_projection);
 
   // Bind the ImGui rendering pipeline.
   ngf_cmd_bind_pipeline(cmdbuf, pipeline_);
   
   // Bind resources.
-  ngf_image_ref font_ref {
-    font_texture_.get(),
-    0u,
-    0u,
-    false
-  };
-  ngf_resource_bind_op resource_binds[3];
-  resource_binds[0].target_binding = 0u;
-  resource_binds[0].target_set = 0u;
-  resource_binds[0].type = NGF_DESCRIPTOR_UNIFORM_BUFFER;
-  resource_binds[0].info.uniform_buffer = ngf_uniform_buffer_bind_info {
-    projmtx_ubo_.get(), 0u, 16u * sizeof(float)
-  };
-  resource_binds[1].target_binding = 1u;
-  resource_binds[1].target_set = 0u;
-  resource_binds[1].type = NGF_DESCRIPTOR_TEXTURE;
-  resource_binds[1].info.image_sampler = ngf_image_sampler_bind_info {
-    font_ref,
-    NULL,
-  };
-  resource_binds[2].target_binding = 2u;
-  resource_binds[2].target_set = 0u;
-  resource_binds[2].type = NGF_DESCRIPTOR_SAMPLER;
-  resource_binds[2].info.image_sampler = ngf_image_sampler_bind_info {
-    font_ref,
-    tex_sampler_.get(),
-  };
-  ngf_cmd_bind_resources(cmdbuf, resource_binds, 3u);
+  ngf::cmd_bind_resources(
+      cmdbuf,
+      uniform_data_.bind_op_at_current_offset(0u, 0u),
+      ngf::descriptor_set<0>::binding<1>::texture(font_texture_.get()),
+      ngf::descriptor_set<0>::binding<2>::sampler(tex_sampler_.get()));
 
   // Set viewport.
   ngf_irect2d viewport_rect = {
@@ -180,24 +166,6 @@ void ngf_imgui::record_rendering_commands(ngf_cmd_buffer *cmdbuf) {
     (uint32_t)fb_width, (uint32_t)fb_height
   };
   ngf_cmd_viewport(cmdbuf, &viewport_rect);
-
-  // Build projection matrix.
-  const ImVec2 &pos = data->DisplayPos;
-  const float L = pos.x;
-  const float R = pos.x + data->DisplaySize.x;
-  const float T = pos.y;
-  const float B = pos.y + data->DisplaySize.y;
-  const float ortho_projection[4][4] =
-  {
-      { 2.0f/(R-L),   0.0f,         0.0f,   0.0f },
-      { 0.0f,         2.0f/(T-B),   0.0f,   0.0f },
-      { 0.0f,         0.0f,        -1.0f,   0.0f },
-      { (R+L)/(L-R),  (T+B)/(B-T),  0.0f,   1.0f },
-  };
-  ngf_error err =
-    ngf_write_uniform_buffer(projmtx_ubo_.get(),
-                             ortho_projection, sizeof(ortho_projection));
-  assert(err == NGF_ERROR_OK);
 
   // These vectors will store vertex and index data for the draw calls.
   // Later this data will be transferred to GPU buffers.
@@ -264,25 +232,38 @@ void ngf_imgui::record_rendering_commands(ngf_cmd_buffer *cmdbuf) {
   }
 
   // Create new vertex and index buffers.
-  ngf_attrib_buffer_info attrib_buffer_info{
+  ngf_buffer_info attrib_buffer_info {
     sizeof(ImDrawVert) * vertex_data.size(), // data size
-    vertex_data.data(),
-    NULL,
-    NULL,
-    NGF_VERTEX_DATA_USAGE_TRANSIENT
+    NGF_BUFFER_STORAGE_HOST_READABLE_WRITEABLE
   };
-  attrib_buffer_.initialize(attrib_buffer_info);
+  ngf_attrib_buffer *attrib_buffer = nullptr;
+  ngf_create_attrib_buffer2(&attrib_buffer_info, &attrib_buffer);
+  attrib_buffer_.reset(attrib_buffer);
+  void *mapped_attrib_buffer =
+      ngf_attrib_buffer_map_range(attrib_buffer, 0, attrib_buffer_info.size,
+                                  NGF_BUFFER_MAP_WRITE_BIT |
+                                  NGF_BUFFER_MAP_DISCARD_BIT);
+  assert(mapped_attrib_buffer != nullptr);
+  memcpy(mapped_attrib_buffer, vertex_data.data(), attrib_buffer_info.size);
+  ngf_attrib_buffer_flush_range(attrib_buffer, 0, attrib_buffer_info.size);
+  ngf_attrib_buffer_unmap(attrib_buffer);
 
-  ngf_index_buffer_info index_buffer_info{
+  ngf_buffer_info index_buffer_info {
     sizeof(ImDrawIdx) * index_data.size(),
-    index_data.data(),
-    NULL,
-    NULL,
-    NGF_VERTEX_DATA_USAGE_TRANSIENT
+    NGF_BUFFER_STORAGE_HOST_READABLE_WRITEABLE
   };
-  index_buffer_.initialize(index_buffer_info);
+  ngf_index_buffer *index_buffer = nullptr;
+  ngf_create_index_buffer2(&index_buffer_info, &index_buffer);
+  index_buffer_.reset(index_buffer);
+  void *mapped_index_buffer =
+      ngf_index_buffer_map_range(index_buffer, 0, index_buffer_info.size,
+                                 NGF_BUFFER_MAP_WRITE_BIT |
+                                 NGF_BUFFER_MAP_DISCARD_BIT);
+  assert(mapped_index_buffer != nullptr);
+  memcpy(mapped_index_buffer, index_data.data(), index_buffer_info.size);
+  ngf_index_buffer_flush_range(index_buffer, 0, index_buffer_info.size);
+  ngf_index_buffer_unmap(index_buffer);
 
-  // Record commands into the cmd buffer.
   ngf_cmd_bind_index_buffer(cmdbuf, index_buffer_,
                             sizeof(ImDrawIdx) < 4
                                 ? NGF_TYPE_UINT16 : NGF_TYPE_UINT32);
