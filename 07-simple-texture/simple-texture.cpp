@@ -129,7 +129,9 @@ init_result on_initialized(uintptr_t native_handle,
     0.0f,
     0.0f,
     0.0f,
-    {0.0f}
+    {0.0f},
+    1.0f,
+    false
   };
   err = state->sampler.initialize(samp_info);
   assert(err == NGF_ERROR_OK);
