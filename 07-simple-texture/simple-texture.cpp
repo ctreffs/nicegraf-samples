@@ -1,21 +1,24 @@
 /**
-Copyright (c) 2018 nicegraf contributors
-Permission is hereby granted, free of charge, to any person obtaining a copy of
-this software and associated documentation files (the "Software"), to deal in
-the Software without restriction, including without limitation the rights to
-use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of
-the Software, and to permit persons to whom the Software is furnished to do so,
-subject to the following conditions:
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
-*/
+ * Copyright (c) 2019 nicegraf contributors
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy 
+ * of this software and associated documentation files (the "Software"), to
+ * deal in the Software without restriction, including without limitation the
+ * rights to use, copy, modify, merge, publish, distribute, sublicense, and/or
+ * sell copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+ * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
+ * IN THE SOFTWARE.
+ */
 #define _CRT_SECURE_NO_WARNINGS
 #include "common.h"
 #include <nicegraf.h>
@@ -33,7 +36,9 @@ struct app_state {
   ngf::shader_stage frag_stage;
   ngf::graphics_pipeline pipeline;
   ngf::image image;
+  ngf::pixel_buffer pbuffer;
   ngf::sampler sampler;
+  bool pixel_data_uploaded = false;
 };
 
 // Called upon application initialization.
@@ -105,19 +110,12 @@ init_result on_initialized(uintptr_t native_handle,
   err = state->image.initialize(img_info);
   assert(err == NGF_ERROR_OK);
 
-  // Populate image with data.
-  FILE *image = fopen("textures/LENA0.DATA", "rb");
-  assert(image != NULL);
-  fseek(image, 0, SEEK_END);
-  const uint32_t image_data_size = (uint32_t)ftell(image);
-  fseek(image, 0, SEEK_SET);
-  uint8_t *image_data = new uint8_t[image_data_size];
-  size_t read_bytes = fread(image_data, 1, image_data_size, image);
-  assert(read_bytes == 512u * 512u * 4u);
-  fclose(image);
-  err = ngf_populate_image(state->image.get(), 0u, {0u, 0u, 0u},
-                           {512u, 512u, 1u}, image_data);
-  delete[] image_data;
+  // Create the staging pixel buffer.
+  const ngf_pixel_buffer_info pbuffer_info = {
+    512u * 512u * 4u,
+    NGF_PIXEL_BUFFER_USAGE_WRITE
+  };
+  err = state->pbuffer.initialize(pbuffer_info);
   assert(err == NGF_ERROR_OK);
 
   // Create sampler.
@@ -147,6 +145,35 @@ void on_frame(uint32_t w, uint32_t h, float, void *userdata) {
   ngf_cmd_buffer_info cmd_info;
   ngf_create_cmd_buffer(&cmd_info, &cmd_buf);
   ngf_start_cmd_buffer(cmd_buf);
+  if (state->pixel_data_uploaded && state->pbuffer.get() != nullptr) {
+    state->pbuffer.reset(nullptr);
+  } else if (!state->pixel_data_uploaded) {
+    // Populate image with data.
+    FILE *image = fopen("textures/LENA0.DATA", "rb");
+    assert(image != NULL);
+    fseek(image, 0, SEEK_END);
+    const uint32_t image_data_size = (uint32_t)ftell(image);
+    fseek(image, 0, SEEK_SET);
+    void *mapped_pbuf = ngf_pixel_buffer_map_range(state->pbuffer,
+                                                   0,
+                                                   image_data_size,
+                                                   NGF_BUFFER_MAP_WRITE_BIT);
+    size_t read_bytes = fread(mapped_pbuf, 1, image_data_size, image);
+    assert(read_bytes == 512u * 512u * 4u);
+    ngf_pixel_buffer_flush_range(state->pbuffer, 0, image_data_size);
+    ngf_pixel_buffer_unmap(state->pbuffer);
+    fclose(image);
+    ngf_image_ref img_ref = {
+      state->image,
+      0,
+      0,
+      false
+    };
+    ngf_offset3d offset { 0, 0, 0 };
+    ngf_extent3d extent { 512, 512, 1};
+    ngf_cmd_write_image(cmd_buf, state->pbuffer, 0, img_ref, &offset, &extent);
+    state->pixel_data_uploaded = true;
+  }
   ngf_cmd_begin_pass(cmd_buf, state->default_rt);
   ngf_cmd_bind_pipeline(cmd_buf, state->pipeline);
   ngf_cmd_viewport(cmd_buf, &viewport);
