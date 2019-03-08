@@ -100,6 +100,8 @@ int main(int, char **) {
   ngf_render_target *defaultrt = nullptr;
   ngf_default_render_target(NGF_LOAD_OP_DONTCARE,
                             NGF_LOAD_OP_DONTCARE,
+                            NGF_STORE_OP_STORE,
+                            NGF_STORE_OP_DONTCARE,
                             NULL,
                             NULL,
                             &defaultrt);
@@ -116,7 +118,7 @@ int main(int, char **) {
                          (uint32_t)new_win_height);
     }
     
-    if (ngf_begin_frame(init_data.context) == NGF_ERROR_OK) {
+    if (ngf_begin_frame() == NGF_ERROR_OK) {
       // Notify application.
       on_frame((uint32_t)old_win_width, (uint32_t)old_win_height,
                 (float)glfwGetTime(),
@@ -141,7 +143,7 @@ int main(int, char **) {
       ngf_submit_cmd_buffer(1u, &b);
 #endif
       // End frame.
-      ngf_end_frame(init_data.context);
+      ngf_end_frame();
     }
   }
   ngf_destroy_render_target(defaultrt);

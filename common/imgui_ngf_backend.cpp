@@ -13,6 +13,7 @@ ngf_imgui::ngf_imgui() : uniform_data_(3) {
   ngf_render_target *rt;
   ngf_error err =
       ngf_default_render_target(NGF_LOAD_OP_DONTCARE, NGF_LOAD_OP_DONTCARE,
+                                NGF_STORE_OP_STORE, NGF_STORE_OP_DONTCARE,
                                 NULL, NULL, &rt);
   assert(err == NGF_ERROR_OK);
   default_rt_ = ngf::render_target(rt);
@@ -237,7 +238,7 @@ void ngf_imgui::record_rendering_commands(ngf_cmd_buffer *cmdbuf) {
     NGF_BUFFER_STORAGE_HOST_READABLE_WRITEABLE
   };
   ngf_attrib_buffer *attrib_buffer = nullptr;
-  ngf_create_attrib_buffer2(&attrib_buffer_info, &attrib_buffer);
+  ngf_create_attrib_buffer(&attrib_buffer_info, &attrib_buffer);
   attrib_buffer_.reset(attrib_buffer);
   void *mapped_attrib_buffer =
       ngf_attrib_buffer_map_range(attrib_buffer, 0, attrib_buffer_info.size,
@@ -253,7 +254,7 @@ void ngf_imgui::record_rendering_commands(ngf_cmd_buffer *cmdbuf) {
     NGF_BUFFER_STORAGE_HOST_READABLE_WRITEABLE
   };
   ngf_index_buffer *index_buffer = nullptr;
-  ngf_create_index_buffer2(&index_buffer_info, &index_buffer);
+  ngf_create_index_buffer(&index_buffer_info, &index_buffer);
   index_buffer_.reset(index_buffer);
   void *mapped_index_buffer =
       ngf_index_buffer_map_range(index_buffer, 0, index_buffer_info.size,

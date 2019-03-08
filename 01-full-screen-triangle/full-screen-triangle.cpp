@@ -73,6 +73,7 @@ init_result on_initialized(uintptr_t native_handle,
   // Obtain the default render target.
   ngf_render_target *rt;
   err = ngf_default_render_target(NGF_LOAD_OP_CLEAR, NGF_LOAD_OP_DONTCARE,
+                                  NGF_STORE_OP_STORE, NGF_STORE_OP_DONTCARE,
                                   &clear, NULL, &rt);
   assert(err == NGF_ERROR_OK);
   state->default_rt = ngf::render_target(rt);
@@ -110,7 +111,9 @@ void on_frame(uint32_t w, uint32_t h, float, void *userdata) {
   clear.clear_color[1] = 0.7f;
   clear.clear_color[2] = 0.8f;
   clear.clear_color[3] = 1.0f;
-  ngf_error err = ngf_default_render_target(NGF_LOAD_OP_CLEAR, NGF_LOAD_OP_DONTCARE,
+  ngf_error err = ngf_default_render_target(
+                                   NGF_LOAD_OP_CLEAR, NGF_LOAD_OP_DONTCARE,
+                                   NGF_STORE_OP_STORE, NGF_STORE_OP_DONTCARE,
                                   &clear, NULL, &rt);
   assert(err == NGF_ERROR_OK);
   state->default_rt = ngf::render_target(rt);
