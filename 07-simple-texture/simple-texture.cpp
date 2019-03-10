@@ -61,6 +61,7 @@ init_result on_initialized(uintptr_t native_handle,
   ngf_render_target *rt;
   ngf_error err =
       ngf_default_render_target(NGF_LOAD_OP_CLEAR, NGF_LOAD_OP_DONTCARE,
+                                NGF_STORE_OP_STORE, NGF_STORE_OP_DONTCARE,
                                 &clear, NULL, &rt);
   assert(err == NGF_ERROR_OK);
   state->default_rt = ngf::render_target(rt);
