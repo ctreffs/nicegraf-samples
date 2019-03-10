@@ -25,10 +25,10 @@ cmake_minimum_required(VERSION 3.0.2)
 project(nicegraf-samples)
 
 if (WIN32)
-  set(COMMON_COMPILE_OPTS "/W4" "/WX")
+  set(COMMON_COMPILE_OPTS "/W4" "/WX" "/std:c++17")
   set(EXECUTABLE_SUFFIX ".exe")
 else()
-  set(COMMON_COMPILE_OPTS "--std=c++14" "-Wall" "-Wconversion" "-Werror"
+  set(COMMON_COMPILE_OPTS "--std=c++17" "-Wall" "-Wconversion" "-Werror"
         "-Wno-unknown-pragmas")
   set(EXECUTABLE_SUFFIX "")
 endif()
@@ -52,7 +52,7 @@ add_library(imgui
 target_include_directories(imgui PUBLIC
   ${CMAKE_CURRENT_LIST_DIR}/third_party/imgui)
 
-target_compile_options(imgui PRIVATE "--std=c++14")
+target_compile_options(imgui PRIVATE "--std=c++17")
 
 target_link_libraries(imgui glfw)
   
