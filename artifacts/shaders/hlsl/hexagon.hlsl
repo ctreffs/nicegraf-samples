@@ -12,11 +12,9 @@ struct HexagonPSInput {
 };
 
 #if defined(ANIMATE)
-cbuffer AspectRatioUniform : register(b0) {
-  float u_AspectRatio;
-};
-cbuffer AnimationUniforms : register(b1) {
+cbuffer Uniforms : register(b0) {
   float u_Time;
+  float u_AspectRatio;
 };
 #endif
 

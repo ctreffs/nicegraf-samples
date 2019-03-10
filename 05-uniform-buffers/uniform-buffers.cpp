@@ -23,6 +23,7 @@ SOFTWARE.
 #include <nicegraf_wrappers.h>
 #include <imgui.h>
 #include <assert.h>
+#include <optional>
 #include <stdint.h>
 #include <stdio.h>
 #include <math.h>
@@ -33,6 +34,11 @@ SOFTWARE.
 */
 constexpr double TAU = 6.28318530718;
 
+struct uniform_data {
+  float time;
+  float aspect_ratio;
+};
+
 struct app_state {
   ngf::render_target default_rt;
   ngf::shader_stage vert_stage;
@@ -40,8 +46,8 @@ struct app_state {
   ngf::graphics_pipeline pipeline;
   ngf::attrib_buffer vert_buffer;
   ngf::index_buffer index_buffer;
-  ngf::uniform_buffer time_buffer;
-  ngf::uniform_buffer aspect_ratio_buffer;
+  ngf::streamed_uniform<uniform_data> uniform_buffer;
+  uniform_data uniform_data;
 };
 
 struct vertex_data {
@@ -67,6 +73,8 @@ init_result on_initialized(uintptr_t native_handle,
   ngf_render_target *rt;
   ngf_error err = ngf_default_render_target(NGF_LOAD_OP_CLEAR,
                                             NGF_LOAD_OP_DONTCARE,
+                                            NGF_STORE_OP_STORE,
+                                            NGF_STORE_OP_DONTCARE,
                                             &clear, NULL, &rt);
   assert(err == NGF_ERROR_OK);
   state->default_rt = ngf::render_target(rt);
@@ -138,12 +146,18 @@ init_result on_initialized(uintptr_t native_handle,
   // Create the vertex data buffer.
   ngf_attrib_buffer_info buf_info {
     sizeof(vertices),
-    vertices,
-    NULL, NULL,
-    NGF_VERTEX_DATA_USAGE_STATIC
+    NGF_BUFFER_STORAGE_HOST_WRITEABLE
   };
   err = state->vert_buffer.initialize(buf_info);
   assert(err == NGF_ERROR_OK);
+  void *mapped_attr_buf =
+      ngf_attrib_buffer_map_range(state->vert_buffer,
+                                  0,
+                                  sizeof(vertices),
+                                  NGF_BUFFER_MAP_WRITE_BIT);
+  memcpy(mapped_attr_buf, vertices, sizeof(vertices));
+  ngf_attrib_buffer_flush_range(state->vert_buffer, 0, sizeof(vertices));
+  ngf_attrib_buffer_unmap(state->vert_buffer);
 
   // Populate index buffer with data.
   uint16_t indices[3u * 6u];
@@ -155,21 +169,24 @@ init_result on_initialized(uintptr_t native_handle,
   // Create index data buffer.
   ngf_index_buffer_info idx_buf_info {
     sizeof(indices),
-    indices,
-    NULL, NULL,
-    NGF_VERTEX_DATA_USAGE_STATIC
+    NGF_BUFFER_STORAGE_HOST_WRITEABLE
   };
   err = state->index_buffer.initialize(idx_buf_info);
   assert(err == NGF_ERROR_OK);
+  void *mapped_index_buf =
+      ngf_index_buffer_map_range(state->index_buffer,
+                                 0,
+                                 sizeof(indices),
+                                 NGF_BUFFER_MAP_WRITE_BIT);
+  memcpy(mapped_index_buf, indices, sizeof(indices));
+  ngf_index_buffer_flush_range(state->index_buffer, 0, sizeof(indices));
+  ngf_index_buffer_unmap(state->index_buffer);
 
-  // Create uniform buffers.
-  ngf_uniform_buffer_info uniform_buf_info {
-    sizeof(float) // size
-  };
-  err = state->time_buffer.initialize(uniform_buf_info);
+  std::optional<ngf::streamed_uniform<uniform_data>> maybe_streamed_uniform;
+  std::tie(maybe_streamed_uniform, err) =
+      ngf::streamed_uniform<uniform_data>::create(3);
   assert(err == NGF_ERROR_OK);
-  err = state->aspect_ratio_buffer.initialize(uniform_buf_info);
-  assert(err == NGF_ERROR_OK);
+  state->uniform_buffer = std::move(maybe_streamed_uniform.value());
 
   return { std::move(ctx), state};
 }
@@ -178,13 +195,9 @@ init_result on_initialized(uintptr_t native_handle,
 void on_frame(uint32_t w, uint32_t h, float time, void *userdata) {
   static uint32_t old_width = 0u, old_height = 0u;
   app_state *state = (app_state*)userdata;
-  ngf_write_uniform_buffer(state->time_buffer.get(), &time, sizeof(float));
-  if (old_width != w || old_height != h) {
-    float aspect_ratio = (float)w / (float)h;
-    ngf_write_uniform_buffer(state->aspect_ratio_buffer.get(), &aspect_ratio,
-                             sizeof(float));
-    old_width = w; old_height = h;
-  }
+  state->uniform_data.time = time;
+  state->uniform_data.aspect_ratio = (float)w / (float)h;
+  state->uniform_buffer.write(state->uniform_data);
   ngf_irect2d viewport { 0, 0, w, h };
   ngf_cmd_buffer *cmd_buf = nullptr;
   ngf_cmd_buffer_info cmd_info;
@@ -192,25 +205,9 @@ void on_frame(uint32_t w, uint32_t h, float time, void *userdata) {
   ngf_start_cmd_buffer(cmd_buf);
   ngf_cmd_begin_pass(cmd_buf, state->default_rt);
   ngf_cmd_bind_pipeline(cmd_buf, state->pipeline);
-  ngf_resource_bind_op bind_ops[2] = {
-    {
-      0u,
-      1u,
-      NGF_DESCRIPTOR_UNIFORM_BUFFER
-    },
-    {
-      0u,
-      0u,
-      NGF_DESCRIPTOR_UNIFORM_BUFFER
-    },
-  };
-  bind_ops[0].info.uniform_buffer.buffer = state->time_buffer.get();
-  bind_ops[0].info.uniform_buffer.offset = 0u;
-  bind_ops[0].info.uniform_buffer.range = sizeof(float);
-  bind_ops[1].info.uniform_buffer.buffer = state->aspect_ratio_buffer.get();
-  bind_ops[1].info.uniform_buffer.offset = 0u;
-  bind_ops[1].info.uniform_buffer.range = sizeof(float);
-  ngf_cmd_bind_resources(cmd_buf, bind_ops, 2u);
+  ngf::cmd_bind_resources(
+      cmd_buf,
+      state->uniform_buffer.bind_op_at_current_offset(0, 0));
   ngf_cmd_bind_attrib_buffer(cmd_buf, state->vert_buffer, 0u, 0u);
   ngf_cmd_bind_index_buffer(cmd_buf, state->index_buffer, NGF_TYPE_UINT16);
   ngf_cmd_viewport(cmd_buf, &viewport);
