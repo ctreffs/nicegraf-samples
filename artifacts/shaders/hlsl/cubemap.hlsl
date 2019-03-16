@@ -10,7 +10,7 @@
 [vk::binding(2, 0)] uniform sampler samp;
 
 float4 PSMain(Triangle_PSInput ps_in) : SV_TARGET {
-  float3 dir = (u_Transform * float4(ps_in.position.xy, -1.0, 0.0)).xyz;
+  float3 dir = (u_Transform * float4(-ps_in.position.x, ps_in.position.y / (2.0*u_Aspect), -1.0, 0.0)).xyz;
   return tex.Sample(samp, dir);
 }
 

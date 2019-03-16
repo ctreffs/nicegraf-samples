@@ -205,6 +205,7 @@ void on_frame(uint32_t w, uint32_t h, float, void *userdata) {
     }
     state->pixel_data_uploaded = true;
   }
+  state->udata.aspect_ratio = (float)w/(float)h;
   state->uniform_buffer.write(state->udata);
   ngf_cmd_begin_pass(cmd_buf, state->default_rt);
   ngf_cmd_bind_pipeline(cmd_buf, state->pipeline);
@@ -225,16 +226,18 @@ void on_frame(uint32_t w, uint32_t h, float, void *userdata) {
 // Called every time the application has to dra an ImGUI overlay.
 void on_ui(void *userdata) {
   app_state *state = (app_state*)userdata;
-  ImGui::Begin("Texture Filtering", nullptr,
+  ImGui::Begin("Cubemap", nullptr,
                 ImGuiWindowFlags_AlwaysAutoResize);
-  static float yaw = 0.0f,  pitch = 0.0f, roll = 0.0f;
+  static float yaw = 0.0f,  pitch = 0.0;
   ImGui::SliderFloat("Pitch", &pitch, -TAU, TAU);
   ImGui::SliderFloat("Yaw", &yaw, -TAU, TAU);
-  ImGui::SliderFloat("Roll", &roll, -TAU, TAU);
+  ImGui::Text("This sample uses textures by Emil Persson.\n"
+              "Licensed under CC BY 3.0\n"
+              "http://humus.name/index.php?page=Textures");
   ImGui::End();
   state->udata.rotation =
       m4_mul(m4_mul(m4_rotation_x(pitch), m4_rotation_y(yaw)),
-             m4_rotation_z(roll));
+             m4_rotation_z(0.0f));
 
 }
 
