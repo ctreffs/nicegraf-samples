@@ -68,6 +68,8 @@ init_result on_initialized(uintptr_t native_handle,
   ngf_render_target *rt;
   ngf_default_render_target(NGF_LOAD_OP_CLEAR,
                             NGF_LOAD_OP_DONTCARE,
+                            NGF_STORE_OP_STORE,
+                            NGF_STORE_OP_DONTCARE,
                             &clear,
                             NULL,
                             &rt);
