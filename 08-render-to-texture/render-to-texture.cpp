@@ -71,15 +71,17 @@ init_result on_initialized(uintptr_t native_handle,
   // Obtain the default render target.
   ngf_render_target *rt;
   err = ngf_default_render_target(NGF_LOAD_OP_CLEAR, NGF_LOAD_OP_DONTCARE,
+                                  NGF_STORE_OP_STORE, NGF_STORE_OP_DONTCARE,
                                   &clear, NULL, &rt);
   assert(err == NGF_ERROR_OK);
   state->default_rt = ngf::render_target(rt);
   
   // Create the offscreen render target.
   ngf_attachment  offscreen_color_attachment{
-    {state->rt_texture.get(), 0u, 0u, false},
+    {state->rt_texture.get(), 0u, 0u, NGF_CUBEMAP_FACE_POSITIVE_X},
     NGF_ATTACHMENT_COLOR,
     NGF_LOAD_OP_CLEAR,
+    NGF_STORE_OP_STORE,
     {{0.0f}}
   };
   ngf_render_target_info rt_info {
@@ -168,21 +170,9 @@ void on_frame(uint32_t w, uint32_t h, float, void *userdata) {
   ngf_cmd_bind_pipeline(cmd_buf, state->blit_pipeline);
   ngf_cmd_viewport(cmd_buf, &viewport);
   ngf_cmd_scissor(cmd_buf, &viewport);
-  // Create and write to the descriptor set.
-  ngf_resource_bind_op bind_ops[2];
-  bind_ops[0].type = NGF_DESCRIPTOR_TEXTURE;
-  bind_ops[0].target_set = 0u;
-  bind_ops[0].target_binding = 1u;
-  bind_ops[0].info.image_sampler.image_subresource.image = state->rt_texture.get();
-  bind_ops[0].info.image_sampler.image_subresource.layered = false;
-  bind_ops[0].info.image_sampler.image_subresource.layer = 0u;
-  bind_ops[0].info.image_sampler.image_subresource.mip_level = 0u;
-  bind_ops[0].info.image_sampler.sampler = NULL;
-  bind_ops[1].type = NGF_DESCRIPTOR_SAMPLER;
-  bind_ops[1].target_set = 0u;
-  bind_ops[1].target_binding = 2u;
-  bind_ops[1].info.image_sampler.sampler = state->sampler.get();
-  ngf_cmd_bind_resources(cmd_buf, bind_ops, 2u);
+  ngf::cmd_bind_resources(cmd_buf,
+    ngf::descriptor_set<0>::binding<1>::texture(state->rt_texture.get()),
+    ngf::descriptor_set<0>::binding<1>::sampler(state->sampler.get()));
   ngf_cmd_draw(cmd_buf, false, 0u, 3u, 1u);
   ngf_cmd_end_pass(cmd_buf);
   ngf_end_cmd_buffer(cmd_buf);
