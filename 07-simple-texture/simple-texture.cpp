@@ -170,7 +170,7 @@ void on_frame(uint32_t w, uint32_t h, float, void *userdata) {
       state->image,
       0,
       0,
-      false
+      NGF_CUBEMAP_FACE_POSITIVE_X
     };
     ngf_offset3d offset { 0, 0, 0 };
     ngf_extent3d extent { 512, 512, 1};
@@ -181,21 +181,10 @@ void on_frame(uint32_t w, uint32_t h, float, void *userdata) {
   ngf_cmd_bind_pipeline(cmd_buf, state->pipeline);
   ngf_cmd_viewport(cmd_buf, &viewport);
   ngf_cmd_scissor(cmd_buf, &viewport);
-  // Create and write to the descriptor set.
-  ngf_resource_bind_op bind_ops[2];
-  bind_ops[0].type = NGF_DESCRIPTOR_TEXTURE;
-  bind_ops[0].target_binding = 1u;
-  bind_ops[0].target_set = 0u;
-  bind_ops[0].info.image_sampler.image_subresource.image = state->image.get();
-  bind_ops[0].info.image_sampler.image_subresource.layered = false;
-  bind_ops[0].info.image_sampler.image_subresource.layer = 0u;
-  bind_ops[0].info.image_sampler.image_subresource.mip_level = 0u;
-  bind_ops[0].info.image_sampler.sampler = NULL;
-  bind_ops[1].type = NGF_DESCRIPTOR_SAMPLER;
-  bind_ops[1].target_set = 0u;
-  bind_ops[1].target_binding = 2u;
-  bind_ops[1].info.image_sampler.sampler = state->sampler.get();
-  ngf_cmd_bind_resources(cmd_buf, bind_ops, 2u);
+  ngf::cmd_bind_resources(
+    cmd_buf,
+    ngf::descriptor_set<0>::binding<1>::texture(state->image.get()),
+    ngf::descriptor_set<0>::binding<2>::sampler(state->sampler.get()));
   ngf_cmd_draw(cmd_buf, false, 0u, 3u, 1u); 
   ngf_cmd_end_pass(cmd_buf);
   ngf_end_cmd_buffer(cmd_buf);
