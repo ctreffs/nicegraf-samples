@@ -69,6 +69,8 @@ init_result on_initialized(uintptr_t native_handle,
   ngf_render_target *rt;
   ngf_error err = ngf_default_render_target(NGF_LOAD_OP_CLEAR,
                                             NGF_LOAD_OP_DONTCARE,
+                                            NGF_STORE_OP_STORE,
+                                            NGF_STORE_OP_DONTCARE,
                                             &clear, NULL, &rt);
   assert(err == NGF_ERROR_OK);
   state->default_rt = ngf::render_target(rt);
@@ -163,7 +165,7 @@ void on_frame(uint32_t w, uint32_t h, float, void *userdata) {
     };
     ngf_attrib_buffer *staging_buffer = nullptr, *buffer = nullptr;
     ngf_error err =
-        ngf_create_attrib_buffer2(&staging_buf_info, &staging_buffer);
+        ngf_create_attrib_buffer(&staging_buf_info, &staging_buffer);
     assert(err == NGF_ERROR_OK);
     void *mapped_buf = ngf_attrib_buffer_map_range(staging_buffer, 0,
                                                    sizeof(vertices),
@@ -172,7 +174,7 @@ void on_frame(uint32_t w, uint32_t h, float, void *userdata) {
     ngf_attrib_buffer_flush_range(staging_buffer, 0, sizeof(vertices));
     ngf_attrib_buffer_unmap(staging_buffer);
     state->vert_buffer_staging.reset(staging_buffer);
-    err = ngf_create_attrib_buffer2(&buf_info, &buffer);
+    err = ngf_create_attrib_buffer(&buf_info, &buffer);
     assert(err == NGF_ERROR_OK);
     state->vert_buffer.reset(buffer);
     ngf_cmd_copy_attrib_buffer(cmd_buf, staging_buffer, buffer,
