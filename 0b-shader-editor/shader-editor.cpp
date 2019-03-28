@@ -23,13 +23,20 @@ SOFTWARE.
 #include <TextEditor.h>
 #include <assert.h>
 
+struct uniform_data {
+  float time;
+  float time_delta;
+  float width;
+  float height;
+};
+
 struct app_state {
   ngf::render_target     default_render_target;
   ngf::shader_stage      vert_stage;
   ngf::shader_stage      frag_stage;
   ngf::graphics_pipeline pipeline;
   ngf::cmd_buffer        cmdbuf;
-  ngf::uniform_buffer    world_to_clip_ub;
+  ngf::streamed_uniform<uniform_data> uniform_data;
   TextEditor             editor;
   bool                   err_flag = false;
   bool                   force_update = true;
@@ -51,6 +58,8 @@ init_result on_initialized(uintptr_t native_window_handle,
   ngf_error err =
       ngf_default_render_target(NGF_LOAD_OP_CLEAR,
                                 NGF_LOAD_OP_DONTCARE,
+                                NGF_STORE_OP_STORE,
+                                NGF_STORE_OP_DONTCARE,
                                 &clear_color,
                                 nullptr,
                                 &default_render_target);
@@ -60,11 +69,12 @@ init_result on_initialized(uintptr_t native_window_handle,
   // Create a command buffer.
   state->cmdbuf.initialize(ngf_cmd_buffer_info{});
 
-  // Create a uniform buffer.
-  ngf_uniform_buffer_info ubo_info = {
-    sizeof(float) * 4u
-  };
-  state->world_to_clip_ub.initialize(ubo_info);
+  // Create a streamed uniform buffer.
+  std::optional<ngf::streamed_uniform<uniform_data>> maybe_streamed_uniform;
+  std::tie(maybe_streamed_uniform, err) =
+      ngf::streamed_uniform<uniform_data>::create(3);
+  assert(err == NGF_ERROR_OK);
+  state->uniform_data = std::move(maybe_streamed_uniform.value());
 
   state->editor.SetLanguageDefinition( TextEditor::LanguageDefinition::HLSL());
   state->editor.SetText(R"SHADER(#include "shaders/hlsl/editor-preamble.hlsl"
@@ -80,23 +90,18 @@ void on_frame(uint32_t w, uint32_t h, float time, void *userdata) {
 
   app_state      *state = (app_state*)userdata;
   ngf_cmd_buffer *b     = state->cmdbuf.get();
-  float           uniform_data[4] = {
-    time, time - prev_time, (float)w, (float)h, 
-  };
-  prev_time = time;
-  ngf_write_uniform_buffer(state->world_to_clip_ub.get(), uniform_data,
-                           sizeof(float) * 4u);
+  state->uniform_data.write(uniform_data {
+    time,
+    time - prev_time,
+    (float)w,
+    (float)h
+  });
   ngf_start_cmd_buffer(b);
   ngf_cmd_begin_pass(b, state->default_render_target.get());
   if (state->pipeline.get() != nullptr) {
     ngf_cmd_bind_pipeline(b, state->pipeline.get());
-    ngf_resource_bind_op rbop;
-    rbop.target_binding = 0u;
-    rbop.target_set = 0u;
-    rbop.type = NGF_DESCRIPTOR_UNIFORM_BUFFER;
-    rbop.info.uniform_buffer.buffer = state->world_to_clip_ub.get();
-    rbop.info.uniform_buffer.offset = 0u;
-    rbop.info.uniform_buffer.range = 16u;
+    ngf_resource_bind_op rbop =
+        state->uniform_data.bind_op_at_current_offset(0, 0);
     ngf_cmd_bind_resources(b, &rbop, 1u);
     const ngf_irect2d viewport_rect{
       0, 0, w, h
