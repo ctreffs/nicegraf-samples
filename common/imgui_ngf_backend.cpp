@@ -4,7 +4,7 @@
 #include <assert.h>
 #include <vector>
 
-ngf_imgui::ngf_imgui() : uniform_data_(3) {
+ngf_imgui::ngf_imgui() {
 #if !defined(NGF_NO_IMGUI)
   vertex_stage_ = load_shader_stage("imgui", "VSMain", NGF_STAGE_VERTEX);
   fragment_stage_ = load_shader_stage("imgui", "PSMain", NGF_STAGE_FRAGMENT);
@@ -18,6 +18,13 @@ ngf_imgui::ngf_imgui() : uniform_data_(3) {
   assert(err == NGF_ERROR_OK);
   default_rt_ = ngf::render_target(rt);
   
+  // Initialize the streamed uniform object.
+  std::optional<ngf::streamed_uniform<uniform_data>> maybe_streamed_uniform;
+  std::tie(maybe_streamed_uniform, err) =
+      ngf::streamed_uniform<uniform_data>::create(3);
+  assert(err == NGF_ERROR_OK);
+  uniform_data_ = std::move(maybe_streamed_uniform.value());
+
   // Initial pipeline configuration with OpenGL-style defaults.
   ngf_util_graphics_pipeline_data pipeline_data;
   ngf_util_create_default_graphics_pipeline_data(nullptr,
@@ -83,7 +90,7 @@ ngf_imgui::ngf_imgui() : uniform_data_(3) {
   io.Fonts->GetTexDataAsRGBA32(&font_pixels, &width, &height);
 
   // Create and populate font texture.
-  ngf_image_info font_texture_info = {
+  const ngf_image_info font_texture_info = {
     NGF_IMAGE_TYPE_IMAGE_2D, // type
     {(uint32_t)width, (uint32_t)height, 1u}, // extent
     1u, // nmips
@@ -93,11 +100,21 @@ ngf_imgui::ngf_imgui() : uniform_data_(3) {
   };
   err = font_texture_.initialize(font_texture_info);
   assert(err == NGF_ERROR_OK);
-  err = ngf_populate_image(font_texture_.get(), 0u, {0u, 0u, 0u},
-                           {(uint32_t)width, (uint32_t)height, 1u},
-                           font_pixels);
-  assert(err == NGF_ERROR_OK);
   ImGui::GetIO().Fonts->TexID = (ImTextureID)(uintptr_t)font_texture_.get();
+  const ngf_pixel_buffer_info pbuffer_info{
+    4u * width * height,
+    NGF_PIXEL_BUFFER_USAGE_WRITE
+  };
+  err = texture_data_.initialize(pbuffer_info);
+  assert(err == NGF_ERROR_OK);
+  void  *mapped_texture_data = 
+      ngf_pixel_buffer_map_range(texture_data_.get(),
+                                 0,
+                                 4 * width * height,
+                                 NGF_BUFFER_MAP_WRITE_BIT);
+  memcpy(mapped_texture_data, font_pixels, 4 * width * height);
+  ngf_pixel_buffer_flush_range(texture_data_.get(), 0, 4 * width * height);
+  ngf_pixel_buffer_unmap(texture_data_.get());
 
   // Create a sampler for the font texture.
   ngf_sampler_info sampler_info {
@@ -150,7 +167,16 @@ void ngf_imgui::record_rendering_commands(ngf_cmd_buffer *cmdbuf) {
     }
   };
   uniform_data_.write(ortho_projection);
+  ngf_image_ref ref = {
+    font_texture_.get(),
+    0,
+    0,
+    NGF_CUBEMAP_FACE_POSITIVE_X
 
+  };
+  ngf_offset3d tex_offset {0, 0, 0};
+  ngf_extent3d tex_extent {512, 64, 1};
+  ngf_cmd_write_image(cmdbuf, texture_data_.get(), 0, ref, &tex_offset, &tex_extent);
   // Bind the ImGui rendering pipeline.
   ngf_cmd_bind_pipeline(cmdbuf, pipeline_);
   

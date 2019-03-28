@@ -26,6 +26,7 @@ private:
   ngf::sampler tex_sampler_;
   ngf::attrib_buffer attrib_buffer_;
   ngf::index_buffer index_buffer_;
+  ngf::pixel_buffer texture_data_;
   ngf::shader_stage vertex_stage_;
   ngf::shader_stage fragment_stage_;
   ngf::render_target default_rt_;
