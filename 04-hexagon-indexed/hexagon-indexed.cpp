@@ -40,6 +40,8 @@ struct app_state {
   ngf::graphics_pipeline pipeline;
   ngf::attrib_buffer vert_buffer;
   ngf::index_buffer index_buffer;
+  ngf::resource_dispose_queue dispose_queue;
+  bool vertex_data_uploaded = false;
 };
 
 struct vertex_data {
@@ -65,6 +67,8 @@ init_result on_initialized(uintptr_t native_handle,
   ngf_render_target *rt;
   ngf_error err = ngf_default_render_target(NGF_LOAD_OP_CLEAR,
                                             NGF_LOAD_OP_DONTCARE,
+                                            NGF_STORE_OP_STORE,
+                                            NGF_STORE_OP_DONTCARE,
                                             &clear, NULL, &rt);
   assert(err == NGF_ERROR_OK);
   state->default_rt = ngf::render_target(rt);
@@ -111,59 +115,95 @@ init_result on_initialized(uintptr_t native_handle,
   err = state->pipeline.initialize(pipe_info);
   assert(err == NGF_ERROR_OK);
 
-  // Populate vertex buffer with data.
-  vertex_data vertices[7u] = {
-      {  // First vertex is the center of the hexagon.
-          {0.0f, 0.0f},
-          {1.0f, 1.0f, 1.0f}
-      }
-  };
-  for (uint32_t v = 1u; v <= 6u; ++v) {
-    vertex_data &vertex = vertices[v];
-    vertex.position[0] = 0.5f * (float)cos((v - 1u) * TAU / 6.0f);
-    vertex.position[1] = 0.5f * (float)sin((v - 1u) * TAU / 6.0f);
-    vertex.color[0] = 0.5f*(vertex.position[0] + 1.0f);
-    vertex.color[1] = 0.5f*(vertex.position[1] + 1.0f);
-    vertex.color[2] = 1.0f - vertex.position[0];
-  }
-  // Create the vertex data buffer.
-  ngf_attrib_buffer_info buf_info {
-    sizeof(vertices),
-    vertices,
-    NULL, NULL,
-    NGF_VERTEX_DATA_USAGE_STATIC
-  };
-  err = state->vert_buffer.initialize(buf_info);
-  assert(err == NGF_ERROR_OK);
-
-  // Populate index buffer with data.
-  uint16_t indices[3u * 6u];
-  for (uint16_t t = 0u; t < 6u; ++t) {
-    indices[3u*t + 0u] =  0;
-    indices[3u*t + 1u] = (uint16_t)((t + 1u) % 7u);
-    indices[3u*t + 2u] = (uint16_t)((t + 2u >= 7u) ? 1u : (t + 2u));
-  }
-  // Create index data buffer.
-  ngf_index_buffer_info idx_buf_info {
-    sizeof(indices),
-    indices,
-    NULL, NULL,
-    NGF_VERTEX_DATA_USAGE_STATIC
-  };
-  err = state->index_buffer.initialize(idx_buf_info);
-  assert(err == NGF_ERROR_OK);
-
   return { std::move(ctx), state};
 }
 
 // Called every frame.
 void on_frame(uint32_t w, uint32_t h, float, void *userdata) {
   app_state *state = (app_state*)userdata;
-  ngf_irect2d viewport { 0, 0, w, h };
+  state->dispose_queue.update();
+  const ngf_irect2d viewport { 0, 0, w, h };
   ngf_cmd_buffer *cmd_buf = nullptr;
   ngf_cmd_buffer_info cmd_info;
   ngf_create_cmd_buffer(&cmd_info, &cmd_buf);
   ngf_start_cmd_buffer(cmd_buf);
+  if (!state->vertex_data_uploaded) {
+    // Populate vertex buffer with data.
+    vertex_data vertices[7u] = {
+        {  // First vertex is the center of the hexagon.
+            {0.0f, 0.0f},
+            {1.0f, 1.0f, 1.0f}
+        }
+    };
+    for (uint32_t v = 1u; v <= 6u; ++v) {
+      vertex_data &vertex = vertices[v];
+      vertex.position[0] = 0.5f * (float)cos((v - 1u) * TAU / 6.0f);
+      vertex.position[1] = 0.5f * (float)sin((v - 1u) * TAU / 6.0f);
+      vertex.color[0] = 0.5f*(vertex.position[0] + 1.0f);
+      vertex.color[1] = 0.5f*(vertex.position[1] + 1.0f);
+      vertex.color[2] = 1.0f - vertex.position[0];
+    }
+    // Create the vertex data buffer.
+    const ngf_attrib_buffer_info staging_vert_buf_info {
+      sizeof(vertices),
+      NGF_BUFFER_STORAGE_HOST_WRITEABLE
+    };
+    const ngf_attrib_buffer_info vert_buf_info{
+      sizeof(vertices),
+      NGF_BUFFER_STORAGE_PRIVATE
+    };
+    ngf::attrib_buffer staging_vert_buffer;
+    ngf_error err = staging_vert_buffer.initialize(staging_vert_buf_info);
+    void *staging_vert_buf_ptr =
+        ngf_attrib_buffer_map_range(staging_vert_buffer.get(),
+                                    0, sizeof(vertices),
+                                    NGF_BUFFER_MAP_WRITE_BIT);
+    assert(staging_vert_buf_ptr != NULL);
+    memcpy(staging_vert_buf_ptr, vertices, sizeof(vertices));
+    ngf_attrib_buffer_flush_range(staging_vert_buffer, 0, sizeof(vertices));
+    ngf_attrib_buffer_unmap(staging_vert_buffer);
+
+    assert(err == NGF_ERROR_OK);
+    err = state->vert_buffer.initialize(vert_buf_info);
+    assert(err == NGF_ERROR_OK);
+    ngf_cmd_copy_attrib_buffer(cmd_buf, staging_vert_buffer,
+                               state->vert_buffer, sizeof(vertices), 0, 0);
+    state->dispose_queue.enqueue(std::move(staging_vert_buffer));
+
+    // Populate index buffer with data.
+    uint16_t indices[3u * 6u];
+    for (uint16_t t = 0u; t < 6u; ++t) {
+      indices[3u*t + 0u] =  0;
+      indices[3u*t + 1u] = (uint16_t)((t + 1u) % 7u);
+      indices[3u*t + 2u] = (uint16_t)((t + 2u >= 7u) ? 1u : (t + 2u));
+    }
+    // Create index data buffer.
+    const ngf_index_buffer_info staging_idx_buf_info {
+      sizeof(indices),
+      NGF_BUFFER_STORAGE_HOST_WRITEABLE
+    };
+    const ngf_index_buffer_info idx_buf_info {
+      sizeof(indices),
+      NGF_BUFFER_STORAGE_HOST_WRITEABLE
+    };
+    ngf::index_buffer staging_idx_buffer;
+    err = staging_idx_buffer.initialize(staging_idx_buf_info);
+    assert(err == NGF_ERROR_OK);
+    void *staging_idx_buf_ptr =
+        ngf_index_buffer_map_range(staging_idx_buffer.get(),
+                                    0, sizeof(indices),
+                                    NGF_BUFFER_MAP_WRITE_BIT);
+    assert(staging_idx_buf_ptr != NULL);
+    memcpy(staging_idx_buf_ptr, indices, sizeof(indices));
+    ngf_index_buffer_flush_range(staging_idx_buffer, 0, sizeof(indices));
+    ngf_index_buffer_unmap(staging_idx_buffer);
+    err = state->index_buffer.initialize(idx_buf_info);
+    assert(err == NGF_ERROR_OK);
+    ngf_cmd_copy_index_buffer(cmd_buf, staging_idx_buffer,
+                              state->index_buffer, sizeof(indices), 0, 0);
+    state->dispose_queue.enqueue(std::move(staging_idx_buffer));
+    state->vertex_data_uploaded = true;
+  }
   ngf_cmd_begin_pass(cmd_buf, state->default_rt);
   ngf_cmd_bind_pipeline(cmd_buf, state->pipeline);
   ngf_cmd_bind_attrib_buffer(cmd_buf, state->vert_buffer, 0u, 0u);
