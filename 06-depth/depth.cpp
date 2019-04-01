@@ -17,7 +17,7 @@ struct app_state {
   ngf::shader_stage vert_stage;
   ngf::shader_stage frag_stage;
   ngf::graphics_pipeline pipeline;
-  ngf::uniform_buffer world_to_clip_ub[2];
+  ngf::uniform_buffer uniform_data[2];
 };
 
 init_result on_initialized(uintptr_t native_handle,
@@ -59,7 +59,9 @@ init_result on_initialized(uintptr_t native_handle,
   cc.clear_color[0] =
     cc.clear_color[1] = cc.clear_color[2] = cc.clear_color[3] = 0.0f;
   cd.clear_depth = 1.0f;
-  err = ngf_default_render_target(NGF_LOAD_OP_CLEAR, NGF_LOAD_OP_CLEAR, &cc,
+  err = ngf_default_render_target(NGF_LOAD_OP_CLEAR, NGF_LOAD_OP_CLEAR,
+                                  NGF_STORE_OP_STORE, NGF_STORE_OP_DONTCARE,
+                                  &cc,
                                   &cd,
                                   &default_rt);
   assert(err == NGF_ERROR_OK);
@@ -103,17 +105,17 @@ init_result on_initialized(uintptr_t native_handle,
     sizeof(triangle_data)
   };
   for (uint32_t i = 0u; i < 2u; ++i) {
-    err = state->world_to_clip_ub[i].initialize(ubo_info);
+    err = state->uniform_data[i].initialize(ubo_info);
     assert(err == NGF_ERROR_OK);
   }
   // Populate triangles' uniform data
   triangle_data red_triangle {
     0.25f, -0.1f, 0.1f, 0.1f, {1.0f, 0.5f, 0.1f, 1.0f}
   }, blue_triangle { 0.25f, 0.1f, -0.1f, 0.5f, {0.1f, 0.5f, 1.0f, 1.0f}};
-  err = ngf_write_uniform_buffer(state->world_to_clip_ub[0].get(), &red_triangle,
+  err = ngf_write_uniform_buffer(state->uniform_data[0].get(), &red_triangle,
                                  sizeof(red_triangle));
   assert(err == NGF_ERROR_OK);
-  err = ngf_write_uniform_buffer(state->world_to_clip_ub[1].get(), &blue_triangle,
+  err = ngf_write_uniform_buffer(state->uniform_data[1].get(), &blue_triangle,
                                   sizeof(blue_triangle));
   assert(err == NGF_ERROR_OK);
 
@@ -139,7 +141,7 @@ void on_frame(uint32_t w, uint32_t h, float, void *userdata) {
     bind_op.type = NGF_DESCRIPTOR_UNIFORM_BUFFER;
     bind_op.target_set = 0u;
     bind_op.target_binding = 0u;
-    bind_op.info.uniform_buffer.buffer = state->world_to_clip_ub[i].get();
+    bind_op.info.uniform_buffer.buffer = state->uniform_data[i].get();
     bind_op.info.uniform_buffer.offset = 0u;
     bind_op.info.uniform_buffer.range = sizeof(triangle_data);
     ngf_cmd_bind_resources(cmd_buf, &bind_op, 1u);
