@@ -193,7 +193,6 @@ init_result on_initialized(uintptr_t native_handle,
 
 // Called every frame.
 void on_frame(uint32_t w, uint32_t h, float time, void *userdata) {
-  static uint32_t old_width = 0u, old_height = 0u;
   app_state *state = (app_state*)userdata;
   state->uniform_data.time = time;
   state->uniform_data.aspect_ratio = (float)w / (float)h;
