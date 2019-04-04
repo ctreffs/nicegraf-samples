@@ -14,6 +14,9 @@ public:
   // given command buffer.
   void record_rendering_commands(ngf_cmd_buffer *cmdbuf);
 
+  // Records commands that upload the imgui font atlas. This only needs to be
+  // called once.
+  void upload_font_texture(ngf_cmd_buffer *cmdbuf);
 private:
   struct uniform_data {
     float ortho_projection[4][4];

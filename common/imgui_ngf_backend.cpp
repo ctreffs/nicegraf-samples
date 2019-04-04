@@ -102,7 +102,7 @@ ngf_imgui::ngf_imgui() {
   assert(err == NGF_ERROR_OK);
   ImGui::GetIO().Fonts->TexID = (ImTextureID)(uintptr_t)font_texture_.get();
   const ngf_pixel_buffer_info pbuffer_info{
-    4u * width * height,
+    4u * (size_t)width * (size_t)height,
     NGF_PIXEL_BUFFER_USAGE_WRITE
   };
   err = texture_data_.initialize(pbuffer_info);
@@ -110,10 +110,11 @@ ngf_imgui::ngf_imgui() {
   void  *mapped_texture_data = 
       ngf_pixel_buffer_map_range(texture_data_.get(),
                                  0,
-                                 4 * width * height,
+                                 4 * (size_t)width * (size_t)height,
                                  NGF_BUFFER_MAP_WRITE_BIT);
-  memcpy(mapped_texture_data, font_pixels, 4 * width * height);
-  ngf_pixel_buffer_flush_range(texture_data_.get(), 0, 4 * width * height);
+  memcpy(mapped_texture_data, font_pixels, 4 * (size_t)width * (size_t)height);
+  ngf_pixel_buffer_flush_range(texture_data_.get(), 0,
+                               4 * (size_t)width * (size_t)height);
   ngf_pixel_buffer_unmap(texture_data_.get());
 
   // Create a sampler for the font texture.
@@ -138,6 +139,21 @@ ngf_imgui::ngf_imgui() {
 }
 
 #if !defined(NGF_NO_IMGUI)
+
+void ngf_imgui::upload_font_texture(ngf_cmd_buffer *cmdbuf) {
+  const ngf_image_ref ref = {
+    font_texture_.get(),
+    0,
+    0,
+    NGF_CUBEMAP_FACE_POSITIVE_X
+    
+  };
+  ngf_offset3d tex_offset {0, 0, 0};
+  ngf_extent3d tex_extent {512, 64, 1};
+  ngf_cmd_write_image(cmdbuf, texture_data_.get(), 0, ref, &tex_offset,
+                      &tex_extent);
+}
+
 void ngf_imgui::record_rendering_commands(ngf_cmd_buffer *cmdbuf) {
   ImGui::Render();
   ImDrawData *data = ImGui::GetDrawData();
@@ -167,16 +183,7 @@ void ngf_imgui::record_rendering_commands(ngf_cmd_buffer *cmdbuf) {
     }
   };
   uniform_data_.write(ortho_projection);
-  ngf_image_ref ref = {
-    font_texture_.get(),
-    0,
-    0,
-    NGF_CUBEMAP_FACE_POSITIVE_X
 
-  };
-  ngf_offset3d tex_offset {0, 0, 0};
-  ngf_extent3d tex_extent {512, 64, 1};
-  ngf_cmd_write_image(cmdbuf, texture_data_.get(), 0, ref, &tex_offset, &tex_extent);
   // Bind the ImGui rendering pipeline.
   ngf_cmd_bind_pipeline(cmdbuf, pipeline_);
   

@@ -106,6 +106,7 @@ int main(int, char **) {
                             NULL,
                             &defaultrt);
   int old_win_width = 0, old_win_height = 0;
+  bool imgui_font_uploaded = false;
   while (!glfwWindowShouldClose(win)) { // Main loop.
     glfwPollEvents(); // Get input events.
     
@@ -135,6 +136,10 @@ int main(int, char **) {
 
       // Draw the UI.
       ngf_start_cmd_buffer(uibuf);
+      if (!imgui_font_uploaded) {
+        ui.upload_font_texture(uibuf);
+        imgui_font_uploaded = true;
+      }
       ngf_cmd_begin_pass(uibuf, defaultrt);
       ui.record_rendering_commands(uibuf);
       ngf_cmd_end_pass(uibuf);
