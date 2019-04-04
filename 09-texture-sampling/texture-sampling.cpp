@@ -29,6 +29,15 @@ SOFTWARE.
 #include <stdio.h>
 #include <stdlib.h>
 
+struct pane_uniform_data {
+  mat4_t transform_matrix;
+  uint8_t pad[192];
+};
+
+struct uniform_data {
+  pane_uniform_data panes[4];
+};
+
 struct app_state {
   ngf::render_target default_rt;
   ngf::shader_stage vert_stage;
@@ -39,17 +48,14 @@ struct app_state {
   ngf::sampler trilinear_sampler;
   ngf::sampler aniso_sampler;
   ngf::sampler nearest_sampler;
-  ngf::uniform_buffer ubo;
+  ngf::streamed_uniform<uniform_data> ubo;
+  ngf::resource_dispose_queue dispose_queue;
   mat4_t perspective_matrix;
   mat4_t view_matrix;
   float tilt = 0.0f;
   float zoom = 0.0f;
   float pan = 0.0f;
-};
-
-struct uniform_data {
-  mat4_t transform_matrix;
-  uint8_t pad[192];
+  bool textures_uploaded = false;
 };
 
 // Called upon application initialization.
@@ -72,6 +78,7 @@ init_result on_initialized(uintptr_t native_handle,
   ngf_render_target *rt;
   ngf_error err =
       ngf_default_render_target(NGF_LOAD_OP_CLEAR, NGF_LOAD_OP_DONTCARE,
+                                NGF_STORE_OP_STORE, NGF_STORE_OP_DONTCARE,
                                 &clear, NULL, &rt);
   assert(err == NGF_ERROR_OK);
   state->default_rt = ngf::render_target(rt);
@@ -119,18 +126,6 @@ init_result on_initialized(uintptr_t native_handle,
   };
   err = state->image.initialize(img_info);
   assert(err == NGF_ERROR_OK);
-
-  // Populate image with data.
-  char file_name[] = "textures/TILES00.DATA";
-  uint32_t w = 1024u, h = 1024u;
-  for (uint32_t mip_level = 0u;  mip_level < 11u; ++mip_level) {
-    snprintf(file_name, sizeof(file_name), "textures/TILES%d.DATA", mip_level);
-    std::vector<char> data = load_raw_data(file_name);
-    err = ngf_populate_image(state->image.get(), mip_level, {0u, 0u, 0u},
-                             {w, h, 1u}, data.data());
-    assert(err == NGF_ERROR_OK);
-    w = w >> 1; h = h >> 1;
-  }
   
   // Create samplers.
   ngf_sampler_info samp_info {
@@ -161,27 +156,26 @@ init_result on_initialized(uintptr_t native_handle,
   err = state->aniso_sampler.initialize(samp_info);
   assert(err == NGF_ERROR_OK);
 
-  // Create the uniform buffer.
-  ngf_uniform_buffer_info ubo_info = {
-    sizeof(uniform_data) * 4u
-  };
-  err = state->ubo.initialize(ubo_info);
+  // Create a streamed uniform buffer.
+  std::optional<ngf::streamed_uniform<uniform_data>> maybe_streamed_uniform;
+  std::tie(maybe_streamed_uniform, err) =
+      ngf::streamed_uniform<uniform_data>::create(3);
   assert(err == NGF_ERROR_OK);
+  state->ubo = std::move(maybe_streamed_uniform.value());
+
   state->perspective_matrix = m4_identity();
   state->view_matrix = m4_identity();
   return { std::move(ctx), state};
 }
 
-void draw_textured_quad(const ngf_uniform_buffer *ubo,
-                        size_t buffer_offset,
+void draw_textured_quad(const ngf::streamed_uniform<uniform_data> &ubo,
+                        size_t pane,
                         const ngf_sampler *sampler,
                         ngf_cmd_buffer *cmd_buf) {
   ngf::cmd_bind_resources(cmd_buf,
                          ngf::descriptor_set<1>::binding<1>::sampler(sampler),
-                         ngf::descriptor_set<1>::binding<0>::uniform_buffer(
-                             ubo,
-                             buffer_offset * sizeof(uniform_data),
-                             sizeof(uniform_data)));
+                         ubo.bind_op_at_current_offset(
+                            1, 0, sizeof(pane_uniform_data) * pane));
                          
   ngf_cmd_draw(cmd_buf, false, 0u, 6u, 1u);
 }
@@ -201,22 +195,40 @@ void on_frame(uint32_t w, uint32_t h, float, void *userdata) {
   const mat4_t camera = m4_mul(m4_mul(m4_mul(m4_identity(), rotation),
                                       translation),
                                state->perspective_matrix);
-  uniform_data ubo_data[4];
-  for (uint32_t i = 0u; i < sizeof(ubo_data)/sizeof(uniform_data); ++i) {
+  uniform_data ubo_data;
+  for (uint32_t i = 0u; i < sizeof(ubo_data)/sizeof(pane_uniform_data); ++i) {
     const vec3_t origin = vec3(-3.0f + (float)i * 2.0f, 0.0f, 0.0f);
     const mat4_t model = m4_mul(m4_scaling(vec3(0.99f, 0.99f, 0.99f)),
                                 m4_translation(origin));
-    ubo_data[i].transform_matrix = m4_mul(model, camera);
+    ubo_data.panes[i].transform_matrix = m4_mul(model, camera);
   }
+  state->ubo.write(ubo_data);
 
-  ngf_error err =
-      ngf_write_uniform_buffer(state->ubo, ubo_data, sizeof(ubo_data));
-  assert(err == NGF_ERROR_OK);
   ngf_irect2d viewport { 0, 0, w, h };
   ngf_cmd_buffer *cmd_buf = nullptr;
   ngf_cmd_buffer_info cmd_info;
   ngf_create_cmd_buffer(&cmd_info, &cmd_buf);
   ngf_start_cmd_buffer(cmd_buf);
+  if (!state->textures_uploaded) {
+    char file_name[] = "textures/TILES00.DATA";
+    uint32_t tw = 1024u, th = 1024u;
+    for (uint32_t mip_level = 0u;  mip_level < 11u; ++mip_level) {
+      snprintf(file_name, sizeof(file_name), "textures/TILES%d.DATA", mip_level);
+      std::vector<char> data = load_raw_data(file_name);
+      const ngf_error err =
+        state->dispose_queue.write_image(cmd_buf,
+                                         data.data(),
+                                         data.size(),
+                                         0u,
+                                         ngf::image_ref(state->image.get(),
+                                                        mip_level),
+                                         {0u, 0u, 0u},
+                                         {tw, th, 1u});
+      assert(err == NGF_ERROR_OK);
+      tw = tw >> 1; th = th >> 1;
+    }
+    state->textures_uploaded = true;
+  }
   ngf_cmd_begin_pass(cmd_buf, state->default_rt);
   ngf_cmd_bind_pipeline(cmd_buf, state->pipeline);
   ngf_cmd_viewport(cmd_buf, &viewport);
