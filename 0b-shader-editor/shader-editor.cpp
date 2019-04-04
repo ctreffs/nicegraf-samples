@@ -143,7 +143,7 @@ void on_ui(void *userdata) {
       pipe_info.shader_stages[1] = state->frag_stage.get();
       pipe_info.compatible_render_target = state->default_render_target.get();
       // Create pipeline layout from metadata.
-      plmd *pipeline_metadata = load_pipeline_metadata("textured-quad");
+      ngf_plmd *pipeline_metadata = load_pipeline_metadata("textured-quad");
       assert(pipeline_metadata);
       ngf_util_create_pipeline_layout_from_metadata(
           ngf_plmd_get_layout(pipeline_metadata),

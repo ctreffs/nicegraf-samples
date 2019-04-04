@@ -187,10 +187,10 @@ ngf::shader_stage load_shader_stage(const char *root_name,
   return stage;
 }
 
-plmd* load_pipeline_metadata(const char *name, const char *prefix) {
+ngf_plmd* load_pipeline_metadata(const char *name, const char *prefix) {
   std::string file_name = prefix + std::string(name) + ".pipeline";
   std::vector<char> content = load_raw_data(file_name.c_str());
-  plmd *m;
+  ngf_plmd *m;
   ngf_plmd_error err = ngf_plmd_load(content.data(), content.size(), NULL, &m);
   assert(err == NGF_PLMD_ERROR_OK); err = NGF_PLMD_ERROR_OK;
   return m;

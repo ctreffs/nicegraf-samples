@@ -116,7 +116,7 @@ init_result on_initialized(uintptr_t native_window_handle,
   pipeline_data.vertex_input_info.vert_buf_bindings = &binding_desc;
   
   // Create pipeline layout from metadata.
-  plmd *pipeline_metadata = load_pipeline_metadata("cubes-instanced");
+  ngf_plmd *pipeline_metadata = load_pipeline_metadata("cubes-instanced");
   assert(pipeline_metadata);
   ngf_util_create_pipeline_layout_from_metadata(
       ngf_plmd_get_layout(pipeline_metadata),

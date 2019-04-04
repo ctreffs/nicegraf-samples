@@ -98,7 +98,7 @@ init_result on_initialized(uintptr_t native_handle,
       load_shader_stage("simple-texture", "PSMain", NGF_STAGE_FRAGMENT);
   state->offscreen_frag_stage =
       load_shader_stage("fullscreen-triangle", "PSMain", NGF_STAGE_FRAGMENT);
-  plmd *pipeline_metadata = load_pipeline_metadata("simple-texture");
+  ngf_plmd *pipeline_metadata = load_pipeline_metadata("simple-texture");
 
   // Create pipeline for blit pass.
   ngf_util_graphics_pipeline_data blit_pipeline_data;

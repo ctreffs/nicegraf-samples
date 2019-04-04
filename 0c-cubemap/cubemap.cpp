@@ -85,7 +85,7 @@ init_result on_initialized(uintptr_t native_handle,
       load_shader_stage("cubemap", "VSMain", NGF_STAGE_VERTEX);
   state->frag_stage =
       load_shader_stage("cubemap", "PSMain", NGF_STAGE_FRAGMENT);
-  plmd* pipeline_metadata = load_pipeline_metadata("cubemap");
+  ngf_plmd* pipeline_metadata = load_pipeline_metadata("cubemap");
   assert(pipeline_metadata);
 
   // Initial pipeline configuration with OpenGL-style defaults.

@@ -30,7 +30,7 @@ ngf_imgui::ngf_imgui() {
   ngf_util_create_default_graphics_pipeline_data(nullptr,
                                                  &pipeline_data);
   
-  plmd *pipeline_metadata = load_pipeline_metadata("imgui");
+  ngf_plmd *pipeline_metadata = load_pipeline_metadata("imgui");
 
   // Simple pipeline layout with just one descriptor set that has
   // a uniform buffer and a texture.
