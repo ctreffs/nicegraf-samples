@@ -77,7 +77,7 @@ init_result on_initialized(uintptr_t native_window_handle,
   state->default_render_target.reset(default_render_target);
   
   // Load shader stages.
-  state->vert_stage = load_shader_stage("cubes-instanced", "VSMain", NGF_STAGE_VERTEX);
+  state->vert_stage = load_shader_stage("cubes-instanced", "VSMainInstanced", NGF_STAGE_VERTEX);
   state->frag_stage = load_shader_stage("cubes-instanced", "PSMain", NGF_STAGE_FRAGMENT);
   
   // Create the initial pipeline configuration with OpenGL-style defaults.
@@ -154,7 +154,9 @@ init_result on_initialized(uintptr_t native_window_handle,
     0.0f,
     0.0f,
     0.0f,
-    {0.0f}
+    {0.0f},
+    1.0f,
+    false
   };
   err = state->sampler.initialize(samp_info);
   assert(err == NGF_ERROR_OK);
