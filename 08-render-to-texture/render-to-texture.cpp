@@ -146,7 +146,9 @@ init_result on_initialized(uintptr_t native_handle,
     0.0f,
     0.0f,
     0.0f,
-    {0.0f}
+    {0.0f},
+    1.0f,
+    false
   };
   err = state->sampler.initialize(samp_info);
   assert(err == NGF_ERROR_OK);
@@ -172,7 +174,7 @@ void on_frame(uint32_t w, uint32_t h, float, void *userdata) {
   ngf_cmd_scissor(cmd_buf, &viewport);
   ngf::cmd_bind_resources(cmd_buf,
     ngf::descriptor_set<0>::binding<1>::texture(state->rt_texture.get()),
-    ngf::descriptor_set<0>::binding<1>::sampler(state->sampler.get()));
+    ngf::descriptor_set<0>::binding<2>::sampler(state->sampler.get()));
   ngf_cmd_draw(cmd_buf, false, 0u, 3u, 1u);
   ngf_cmd_end_pass(cmd_buf);
   ngf_end_cmd_buffer(cmd_buf);
