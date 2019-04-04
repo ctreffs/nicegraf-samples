@@ -17,7 +17,9 @@ struct app_state {
   ngf::shader_stage vert_stage;
   ngf::shader_stage frag_stage;
   ngf::graphics_pipeline pipeline;
+  ngf::resource_dispose_queue discard_queue;
   ngf::uniform_buffer uniform_data[2];
+  bool uniform_data_uploaded = false;
 };
 
 init_result on_initialized(uintptr_t native_handle,
@@ -100,25 +102,6 @@ init_result on_initialized(uintptr_t native_handle,
   err = state->pipeline.initialize(pipe_info);
   assert(err == NGF_ERROR_OK); 
 
-  // Initialize uniform buffers.
-  ngf_uniform_buffer_info ubo_info {
-    sizeof(triangle_data)
-  };
-  for (uint32_t i = 0u; i < 2u; ++i) {
-    err = state->uniform_data[i].initialize(ubo_info);
-    assert(err == NGF_ERROR_OK);
-  }
-  // Populate triangles' uniform data
-  triangle_data red_triangle {
-    0.25f, -0.1f, 0.1f, 0.1f, {1.0f, 0.5f, 0.1f, 1.0f}
-  }, blue_triangle { 0.25f, 0.1f, -0.1f, 0.5f, {0.1f, 0.5f, 1.0f, 1.0f}};
-  err = ngf_write_uniform_buffer(state->uniform_data[0].get(), &red_triangle,
-                                 sizeof(red_triangle));
-  assert(err == NGF_ERROR_OK);
-  err = ngf_write_uniform_buffer(state->uniform_data[1].get(), &blue_triangle,
-                                  sizeof(blue_triangle));
-  assert(err == NGF_ERROR_OK);
-
   return {std::move(ctx), state};
  }
 
@@ -129,12 +112,40 @@ void on_frame(uint32_t w, uint32_t h, float, void *userdata) {
   ngf_cmd_buffer_info cmd_info;
   ngf_create_cmd_buffer(&cmd_info, &cmd_buf);
   ngf_start_cmd_buffer(cmd_buf);
+  if (!state->uniform_data_uploaded) {
+    // Initialize uniform buffers.
+    ngf_uniform_buffer_info ubo_info {
+      sizeof(triangle_data)
+    };
+    ngf_error err = NGF_ERROR_OK;
+    for (uint32_t i = 0u; i < 2u; ++i) {
+      err = state->uniform_data[i].initialize(ubo_info);
+      assert(err == NGF_ERROR_OK);
+    }
+    // Populate triangles' uniform data
+    triangle_data red_triangle {
+      0.25f, -0.1f, 0.1f, 0.1f, {1.0f, 0.5f, 0.1f, 1.0f}
+    }, blue_triangle { 0.25f, 0.1f, -0.1f, 0.5f, {0.1f, 0.5f, 1.0f, 1.0f}};
+    err  = state->discard_queue.write_buffer(cmd_buf,
+                                             state->uniform_data[0],
+                                             &red_triangle,
+                                             sizeof(red_triangle),
+                                             0,
+                                             0);
+    assert(err == NGF_ERROR_OK);
+    err = state->discard_queue.write_buffer(cmd_buf,
+                                            state->uniform_data[1],
+                                            &blue_triangle,
+                                            sizeof(blue_triangle),
+                                            0,
+                                            0);
+    assert(err == NGF_ERROR_OK);
+    state->uniform_data_uploaded = true;
+  }
   ngf_cmd_begin_pass(cmd_buf, state->default_rt);
   ngf_cmd_bind_pipeline(cmd_buf, state->pipeline);
   ngf_cmd_viewport(cmd_buf, &viewport);
   ngf_cmd_scissor(cmd_buf, &viewport);
-  // Create and populate the descriptor sets.
-
 
   for (uint32_t i = 0u; i < 2u; ++i) {
     ngf_resource_bind_op bind_op;
