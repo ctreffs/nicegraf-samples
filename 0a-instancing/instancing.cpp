@@ -46,6 +46,8 @@ struct app_state {
   ngf::image             texture;
   ngf::sampler           sampler;
   ngf::cmd_buffer        cmdbuf;
+  ngf::resource_dispose_queue dispose_queue;
+  bool                   resources_uploaded = false;
 };
 
 init_result on_initialized(uintptr_t native_window_handle,
@@ -66,6 +68,8 @@ init_result on_initialized(uintptr_t native_window_handle,
   ngf_error err =
       ngf_default_render_target(NGF_LOAD_OP_CLEAR,
                                 NGF_LOAD_OP_CLEAR,
+                                NGF_STORE_OP_STORE,
+                                NGF_STORE_OP_DONTCARE,
                                 &clear_color,
                                 &clear_depth,
                                 &default_render_target);
@@ -126,112 +130,6 @@ init_result on_initialized(uintptr_t native_window_handle,
   state->pipeline.initialize(pipe_info);
   ngf_plmd_destroy(pipeline_metadata, nullptr);
 
-  // Create the vertex attribute and index buffers.
-  float cube_vert_attribs[] = {
-    // Front side.
-    -1.f, -1.f,  1.f,
-     0.f,  0.f,
-     1.f, -1.f,  1.f,
-     1.f,  0.f,
-     1.f,  1.f,  1.f,
-     1.f,  1.f,
-    -1.f,  1.f,  1.f,
-     0.f,  1.f,
-
-    // Back side.
-    -1.f, -1.f, -1.f,
-     0.f,  0.f,
-     1.f, -1.f, -1.f,
-     0.f,  1.f,
-     1.f,  1.f, -1.f,
-     1.f,  1.f,
-    -1.f,  1.f, -1.f,
-     0.f,  1.f,
-
-    // Left side.
-    -1.f, -1.f, -1.f,
-     0.f,  0.f,
-    -1.f, -1.f,  1.f,
-     1.f,  0.f,
-    -1.f,  1.f,  1.f,
-     1.f,  1.f,
-    -1.f,  1.f, -1.f,
-     0.f,  1.f,
-
-    // Right side.
-     1.f, -1.f, -1.f,
-     0.f,  0.f,
-     1.f, -1.f,  1.f,
-     1.f,  0.f,
-     1.f,  1.f,  1.f,
-     1.f,  1.f,
-     1.f,  1.f, -1.f,
-     0.f,  1.f,
-
-    // Top side.
-    -1.f,  1.f,  1.f,
-     0.f,  0.f,
-     1.f,  1.f,  1.f,
-     1.f,  0.f,
-     1.f,  1.f, -1.f,
-     1.f,  1.f,
-    -1.f,  1.f, -1.f,
-     0.f,  1.f,
-
-    // Bottom side.
-    -1.f, -1.f,  1.f,
-     0.f,  0.f,
-     1.f, -1.f,  1.f,
-     1.f,  0.f,
-     1.f, -1.f, -1.f,
-     1.f,  1.f,
-    -1.f, -1.f, -1.f,
-     0.f,  1.f
-  };
-  uint16_t cube_indices[] = {
-     2,  1,  0,  3,  2,  0, // front
-     5,  6,  4,  6,  7,  4, // back
-    11,  9,  8, 11, 10,  9, // left
-    13, 15, 12, 13, 14, 15, // right
-    18, 17, 16, 19, 18, 16, // top
-    20, 21, 22, 20, 22, 23  // bottom
-  };
-  ngf_attrib_buffer_info attr_info = {
-    sizeof(cube_vert_attribs),
-    cube_vert_attribs,
-    nullptr, nullptr,
-    NGF_VERTEX_DATA_USAGE_STATIC,
-  };
-  ngf_index_buffer_info index_info = {
-    sizeof(cube_indices),
-    cube_indices,
-    nullptr, nullptr,
-    NGF_VERTEX_DATA_USAGE_STATIC
-  };
-  err = state->attr_buf.initialize(attr_info);
-  assert(err == NGF_ERROR_OK);
-  err = state->idx_buf.initialize(index_info);
-  assert(err == NGF_ERROR_OK);
- 
-  // Create a uniform buffer.
-  const ngf_uniform_buffer_info world_to_clip_ub_info =
-      { sizeof(mat4_t) };
-  err = state->world_to_clip_ub.initialize(world_to_clip_ub_info);
-  assert(err == NGF_ERROR_OK);
-
-  // Set up transforms.
-  const float  aspect_ratio =
-      (float)initial_window_width / (float)initial_window_height;
-  const mat4_t view_to_clip   =
-      m4_perspective(70.0f, aspect_ratio, 0.01f, 1000.0f);
-  const mat4_t world_to_view =
-      m4_look_at(vec3(110.0f, 110.0f, 150.0f), vec3(110.0f, 110.0f, 0.0f),
-                 vec3(0.0f, 1.0f, 0.0f));
-  const mat4_t world_to_clip = m4_mul(world_to_view, view_to_clip);
-  err = ngf_write_uniform_buffer(state->world_to_clip_ub.get(),
-                                 (void*)&world_to_clip, sizeof(world_to_clip));
-  assert(err == NGF_ERROR_OK);
-
   // Create the texture image.
   const ngf_extent3d img_size { 512u, 512u, 1u };
   const ngf_image_info img_info {
@@ -243,20 +141,6 @@ init_result on_initialized(uintptr_t native_window_handle,
     NGF_IMAGE_USAGE_SAMPLE_FROM
   };
   err = state->texture.initialize(img_info);
-  assert(err == NGF_ERROR_OK);
-
-  // Create texture and load data into it.
-  FILE *image = fopen("textures/LENA0.DATA", "rb");
-  assert(image != NULL);
-  fseek(image, 0, SEEK_END);
-  const uint32_t image_data_size = (uint32_t)ftell(image);
-  fseek(image, 0, SEEK_SET);
-  uint8_t *image_data = new uint8_t[image_data_size];
-  fread(image_data, 1, image_data_size, image);
-  fclose(image);
-  err = ngf_populate_image(state->texture.get(), 0u, {0u, 0u, 0u},
-                           {512u, 512u, 1u}, image_data);
-  delete[] image_data;
   assert(err == NGF_ERROR_OK);
 
   // Create sampler.
@@ -286,6 +170,144 @@ void on_frame(uint32_t w, uint32_t h, float, void *userdata) {
   ngf_cmd_buffer *b     = state->cmdbuf.get();
 
   ngf_start_cmd_buffer(b);
+  if (!state->resources_uploaded) {
+    // Create the vertex attribute and index buffers.
+    const float cube_vert_attribs[] = {
+      // Front side.
+      -1.f, -1.f,  1.f,
+       0.f,  0.f,
+       1.f, -1.f,  1.f,
+       1.f,  0.f,
+       1.f,  1.f,  1.f,
+       1.f,  1.f,
+      -1.f,  1.f,  1.f,
+       0.f,  1.f,
+
+      // Back side.
+      -1.f, -1.f, -1.f,
+       0.f,  0.f,
+       1.f, -1.f, -1.f,
+       0.f,  1.f,
+       1.f,  1.f, -1.f,
+       1.f,  1.f,
+      -1.f,  1.f, -1.f,
+       0.f,  1.f,
+
+      // Left side.
+      -1.f, -1.f, -1.f,
+       0.f,  0.f,
+      -1.f, -1.f,  1.f,
+       1.f,  0.f,
+      -1.f,  1.f,  1.f,
+       1.f,  1.f,
+      -1.f,  1.f, -1.f,
+       0.f,  1.f,
+
+      // Right side.
+       1.f, -1.f, -1.f,
+       0.f,  0.f,
+       1.f, -1.f,  1.f,
+       1.f,  0.f,
+       1.f,  1.f,  1.f,
+       1.f,  1.f,
+       1.f,  1.f, -1.f,
+       0.f,  1.f,
+
+      // Top side.
+      -1.f,  1.f,  1.f,
+       0.f,  0.f,
+       1.f,  1.f,  1.f,
+       1.f,  0.f,
+       1.f,  1.f, -1.f,
+       1.f,  1.f,
+      -1.f,  1.f, -1.f,
+       0.f,  1.f,
+
+      // Bottom side.
+      -1.f, -1.f,  1.f,
+       0.f,  0.f,
+       1.f, -1.f,  1.f,
+       1.f,  0.f,
+       1.f, -1.f, -1.f,
+       1.f,  1.f,
+      -1.f, -1.f, -1.f,
+       0.f,  1.f
+    };
+    const uint16_t cube_indices[] = {
+       2,  1,  0,  3,  2,  0, // front
+       5,  6,  4,  6,  7,  4, // back
+      11,  9,  8, 11, 10,  9, // left
+      13, 15, 12, 13, 14, 15, // right
+      18, 17, 16, 19, 18, 16, // top
+      20, 21, 22, 20, 22, 23  // bottom
+    };
+    ngf_attrib_buffer_info attr_info = {
+      sizeof(cube_vert_attribs),
+      NGF_BUFFER_STORAGE_PRIVATE
+    };
+    ngf_index_buffer_info index_info = {
+      sizeof(cube_indices),
+      NGF_BUFFER_STORAGE_PRIVATE
+    };
+    ngf_error err = state->attr_buf.initialize(attr_info);
+    assert(err == NGF_ERROR_OK);
+    err = state->idx_buf.initialize(index_info);
+    assert(err == NGF_ERROR_OK);
+    state->dispose_queue.write_buffer(
+        b,
+        state->attr_buf,
+        (void*)cube_vert_attribs,
+        sizeof(cube_vert_attribs),
+        0,
+        0);
+    state->dispose_queue.write_buffer(
+        b,
+        state->idx_buf,
+        (void*)cube_indices,
+        sizeof(cube_indices),
+        0,
+        0);
+    // Create a uniform buffer.
+    const ngf_uniform_buffer_info world_to_clip_ub_info =
+        { sizeof(mat4_t) };
+    err = state->world_to_clip_ub.initialize(world_to_clip_ub_info);
+    assert(err == NGF_ERROR_OK);
+
+    // Set up transforms.
+    const float  aspect_ratio = (float)w / (float)h;
+    const mat4_t view_to_clip   =
+        m4_perspective(70.0f, aspect_ratio, 0.01f, 1000.0f);
+    const mat4_t world_to_view =
+        m4_look_at(vec3(110.0f, 110.0f, 150.0f), vec3(110.0f, 110.0f, 0.0f),
+                   vec3(0.0f, 1.0f, 0.0f));
+    const mat4_t world_to_clip = m4_mul(world_to_view, view_to_clip);
+    err = state->dispose_queue.write_buffer(b,
+                                            state->world_to_clip_ub,
+                                            (void*)&world_to_clip,
+                                            sizeof(mat4_t),
+                                            0,
+                                            0);
+    assert(err == NGF_ERROR_OK);
+    // Create texture and load data into it.
+    FILE *image = fopen("textures/LENA0.DATA", "rb");
+    assert(image != NULL);
+    fseek(image, 0, SEEK_END);
+    const uint32_t image_data_size = (uint32_t)ftell(image);
+    fseek(image, 0, SEEK_SET);
+    uint8_t *image_data = new uint8_t[image_data_size];
+    fread(image_data, 1, image_data_size, image);
+    fclose(image);
+    err = state->dispose_queue.write_image(b,
+                                           image_data,
+                                           image_data_size,
+                                           0,
+                                           ngf::image_ref(state->texture.get()),
+                                           ngf_offset3d {   0u,   0u, 0u},
+                                           ngf_extent3d { 512u, 512u, 1u});
+    delete[] image_data;
+    assert(err == NGF_ERROR_OK);
+    state->resources_uploaded = true;
+  }
   ngf_cmd_begin_pass(b, state->default_render_target.get());
   ngf_cmd_bind_pipeline(b, state->pipeline.get());
 
