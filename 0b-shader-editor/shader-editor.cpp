@@ -54,7 +54,7 @@ init_result on_initialized(uintptr_t native_window_handle,
   
   // Obtain the default render target from the context that we just created.
   ngf_render_target *default_render_target = nullptr;
-  ngf_clear clear_color = { 0.0f, 0.0f, 0.0f, 0.0f };
+  ngf_clear clear_color = { { 0.0f, 0.0f, 0.0f, 0.0f } };
   ngf_error err =
       ngf_default_render_target(NGF_LOAD_OP_CLEAR,
                                 NGF_LOAD_OP_DONTCARE,
