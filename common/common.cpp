@@ -50,8 +50,14 @@ void on_frame(uint32_t w, uint32_t h, float time, void *userdata);
 void on_ui(void *userdata);
 void on_shutdown(void *userdata);
 
+#if defined(__APPLE__)
+#define ENTRYFN apple_main
+#else
+#define ENTRYFN main
+#endif
+
 // This is the "common main" for desktop apps.
-int main(int, char **) {
+int ENTRYFN(int, char **) {
   // Initialize GLFW.
   glfwInit();
  
