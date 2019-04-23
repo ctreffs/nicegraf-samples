@@ -1,21 +1,24 @@
 /**
-Copyright (c) 2018 nicegraf contributors
-Permission is hereby granted, free of charge, to any person obtaining a copy of
-this software and associated documentation files (the "Software"), to deal in
-the Software without restriction, including without limitation the rights to
-use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of
-the Software, and to permit persons to whom the Software is furnished to do so,
-subject to the following conditions:
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
-*/
+ * Copyright (c) 2019 nicegraf contributors
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to
+ * deal in the Software without restriction, including without limitation the
+ * rights to use, copy, modify, merge, publish, distribute, sublicense, and/or
+ * sell copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+ * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+ * DEALINGS IN THE SOFTWARE.
+ */
 #define _CRT_SECURE_NO_WARNINGS
 #include <GLFW/glfw3.h>
 #if defined(_WIN32) || defined(_WIN64)
@@ -57,28 +60,34 @@ int main(int, char **) {
  
   // Initialize nicegraf.
   ngf_error err = ngf_initialize(NGF_DEVICE_PREFERENCE_DONTCARE);
-  assert(err == NGF_ERROR_OK);err = NGF_ERROR_OK;
+  assert(err == NGF_ERROR_OK);
 
-  // Tell GLFW not to attempt to create an API context (nicegraf does it for
-  // us).
+  // Tell GLFW not to attempt to create an API context for the
+  // window we're about to create (nicegraf does it for us).
   glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
 
-  // Create the window.
-  GLFWwindow *win =
-      glfwCreateWindow(1024, 768, "nicegraf sample", nullptr, nullptr);
+  // Create a GLFW window.
+  GLFWwindow *win = glfwCreateWindow(1024,
+                                     768,
+                                     "nicegraf sample",
+                                     nullptr,
+                                     nullptr);
   assert(win != nullptr);
 
   // Notify the app.
   int w, h;
   glfwGetFramebufferSize(win, &w, &h);
-  init_result init_data = on_initialized(
-      reinterpret_cast<uintptr_t>(GET_GLFW_NATIVE_HANDLE(win)), (uint32_t)w, (uint32_t)h);
+  init_result init_data = on_initialized((uintptr_t)GET_GLFW_NATIVE_HANDLE(win),
+                                         (uint32_t)w,
+                                         (uint32_t)h);
 
-  // Initialize ImGUI.
+  // Create an ImGui context and initialize ImGui GLFW i/o backend and nicegraf
+  // rendering backend for imgui.
   ImGui::SetCurrentContext(ImGui::CreateContext());
+  ImGui_ImplGlfw_InitForOpenGL(win, true);
+  ngf_imgui ui; // ImGui nicegraf rendering backend.
 
-  // Style the controls.
-
+  // Style ImGui controls.
   ImGui::StyleColorsLight();
   ImGuiStyle &gui_style = ImGui::GetStyle();
   gui_style.WindowRounding = 0.0f;
@@ -86,10 +95,6 @@ int main(int, char **) {
   gui_style.FrameBorderSize = 1.0f;
   gui_style.ScrollbarSize = 20.0f;
   gui_style.WindowTitleAlign.x = 0.5f;
-
-  ImGui_ImplGlfw_InitForOpenGL(win, true);
-
-  ngf_imgui ui; // State of the ngf ImGUI backend.
 
   // Create a command buffer the UI rendering commands.
   ngf::cmd_buffer uibuf;
@@ -115,7 +120,8 @@ int main(int, char **) {
     glfwGetFramebufferSize(win, &new_win_width, &new_win_height);
     if (new_win_width != old_win_width || new_win_height != old_win_height) {
       old_win_width = new_win_width; old_win_height = new_win_height;
-      ngf_resize_context(init_data.context, (uint32_t)new_win_width,
+      ngf_resize_context(init_data.context,
+                         (uint32_t)new_win_width,
                          (uint32_t)new_win_height);
     }
     
@@ -232,7 +238,7 @@ ngf::context create_default_context(uintptr_t handle, uint32_t w, uint32_t h) {
 
 #if !defined(NDEBUG)
   // Install debug message callback in debug mode only.
- // ngf_debug_message_callback(nullptr, debugmsg_cb);
+  // ngf_debug_message_callback(nullptr, debugmsg_cb);
 #endif
 
   return nicegraf_context;
