@@ -23,6 +23,12 @@ SOFTWARE.
 #include <TextEditor.h>
 #include <assert.h>
 
+#if defined(_MSC_VER_)
+#define SED_PATH_SEPARATOR "\\"
+#else
+#define SED_PATH_SEPARATOR "/"
+#endif
+
 struct uniform_data {
   float time;
   float time_delta;
@@ -126,7 +132,8 @@ void on_ui(void *userdata) {
             state->editor.GetText().c_str());
     fclose(hlsl_file);
     int status =
-        system("..\\nicegraf-shaderc\\nicegraf_shaderc live.hlsl -t gl430");
+        system(".." SED_PATH_SEPARATOR "nicegraf-shaderc" SED_PATH_SEPARATOR
+               "nicegraf_shaderc live.hlsl -t gl430 -t msl12");
     if (status == 0) {
       state->vert_stage = load_shader_stage("live", "VSMain", NGF_STAGE_VERTEX,
                                             "./");
