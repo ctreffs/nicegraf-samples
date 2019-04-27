@@ -1,26 +1,28 @@
 /**
-Copyright (c) 2019 nicegraf contributors
-Permission is hereby granted, free of charge, to any person obtaining a copy of
-this software and associated documentation files (the "Software"), to deal in
-the Software without restriction, including without limitation the rights to
-use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies
-of the Software, and to permit persons to whom the Software is furnished to do
-so, subject to the following conditions:
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
-*/
+ * Copyright (c) 2019 nicegraf contributors
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to
+ * deal in the Software without restriction, including without limitation the
+ * rights to use, copy, modify, merge, publish, distribute, sublicense, and/or
+ * sell copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+ * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+ * DEALINGS IN THE SOFTWARE.
+ */
 #define _CRT_SECURE_NO_WARNINGS
 #include "common.h"
 #include "imgui.h"
-#define MATH_3D_IMPLEMENTATION
-#include  "math_3d.h"
+#include "nicemath.h"
 #include <nicegraf.h>
 #include <nicegraf_util.h>
 #include <nicegraf_wrappers.h>
@@ -29,8 +31,12 @@ SOFTWARE.
 #include <stdio.h>
 #include <stdlib.h>
 
+using nm::float4x4;
+using nm::float4;
+using nm::float3;
+
 struct pane_uniform_data {
-  mat4_t transform_matrix;
+  float4x4 transform_matrix;
   uint8_t pad[192];
 };
 
@@ -50,8 +56,8 @@ struct app_state {
   ngf::sampler nearest_sampler;
   ngf::streamed_uniform<uniform_data> ubo;
   ngf::resource_dispose_queue dispose_queue;
-  mat4_t perspective_matrix;
-  mat4_t view_matrix;
+  float4x4 perspective_matrix;
+  float4x4 view_matrix;
   float tilt = 0.0f;
   float zoom = 0.0f;
   float pan = 0.0f;
@@ -163,8 +169,8 @@ init_result on_initialized(uintptr_t native_handle,
   assert(err == NGF_ERROR_OK);
   state->ubo = std::move(maybe_streamed_uniform.value());
 
-  state->perspective_matrix = m4_identity();
-  state->view_matrix = m4_identity();
+  state->perspective_matrix = float4x4::identity();
+  state->view_matrix = float4x4::identity();
   return { std::move(ctx), state};
 }
 
@@ -185,22 +191,21 @@ void on_frame(uint32_t w, uint32_t h, float, void *userdata) {
   static uint32_t old_w = 0u, old_h = 0u;
   app_state *state = (app_state*)userdata;
   if (old_w != w || old_h != h) {
-    state->perspective_matrix = m4_perspective(45.0f, (float)w/(float)h, 0.1f,
-                                               100.0f);
+    state->perspective_matrix = nm::perspective(nm::deg2rad(45.0f),
+                                                (float)w/(float)h,
+                                                0.1f,
+                                                100.0f);
     old_w = w; old_h = h;
   }
-  const mat4_t translation = m4_translation(vec3(-state->pan, 0.0f,
-                                                -10.0f + 0.09f * state->zoom));
-  const mat4_t rotation = m4_rotation_x(-state->tilt);
-  const mat4_t camera = m4_mul(m4_mul(m4_mul(m4_identity(), rotation),
-                                      translation),
-                               state->perspective_matrix);
+  const float4x4 translation =
+      nm::translation(float3(-state->pan, 0.0f, -10.0f + 0.09f * state->zoom));
+  const float4x4 rotation = nm::rotation(-state->tilt, float4 { 1.0f, 0.0f, 0.0f, 0.0f });
+  const float4x4 camera = state->perspective_matrix * translation * rotation;
   uniform_data ubo_data;
   for (uint32_t i = 0u; i < sizeof(ubo_data)/sizeof(pane_uniform_data); ++i) {
-    const vec3_t origin = vec3(-3.0f + (float)i * 2.0f, 0.0f, 0.0f);
-    const mat4_t model = m4_mul(m4_scaling(vec3(0.99f, 0.99f, 0.99f)),
-                                m4_translation(origin));
-    ubo_data.panes[i].transform_matrix = m4_mul(model, camera);
+    const float3 origin { -3.0f + (float)i * 2.0f, 0.0f, 0.0f };
+    const float4x4 model = nm::translation(origin) * nm::scale(float4 {float3{0.99f}, 1.0f});
+    ubo_data.panes[i].transform_matrix = (camera * model);
   }
   state->ubo.write(ubo_data);
 
@@ -251,7 +256,7 @@ void on_ui(void *userdata) {
   app_state *state = (app_state*)userdata;
   ImGui::Begin("Texture Filtering", nullptr,
                 ImGuiWindowFlags_AlwaysAutoResize);
-  ImGui::SliderFloat("Tilt", &state->tilt, .0f, (float)M_PI/2.0f - 0.1f);
+  ImGui::SliderFloat("Tilt", &state->tilt, .0f, (float)nm::PI/2.0f - 0.1f);
   ImGui::SliderFloat("Zoom", &state->zoom, .0f, 100.0f);
   ImGui::SliderFloat("Pan", &state->pan, -5.f, 5.f);
   ImGui::End();
