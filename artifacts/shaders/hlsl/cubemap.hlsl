@@ -3,7 +3,7 @@
 #include "triangle.hlsl"
 
 [vk::binding(0, 0)] cbuffer UniformData {
-  float4x4 u_Transform;
+  row_major float4x4 u_Transform;
   float    u_Aspect;
 };
 [vk::binding(1, 0)] uniform TextureCube tex;

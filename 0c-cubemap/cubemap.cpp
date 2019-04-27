@@ -24,12 +24,14 @@
 #include <nicegraf.h>
 #include <nicegraf_util.h>
 #include <nicegraf_wrappers.h>
+#include <nicemath.h>
 #include <imgui.h>
-#include <math_3d.h>
 #include <assert.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
+
+using nm::float4x4;
 
 /** 
     These samples do not use PI on principle.
@@ -37,7 +39,7 @@
 */
 constexpr float TAU = 6.28318530718f;
 struct uniform_data {
-  mat4_t rotation;
+  float4x4 rotation;
   float aspect_ratio;
   float _pad[3];
 };
@@ -235,10 +237,7 @@ void on_ui(void *userdata) {
               "Licensed under CC BY 3.0\n"
               "http://humus.name/index.php?page=Textures");
   ImGui::End();
-  state->udata.rotation =
-      m4_mul(m4_mul(m4_rotation_x(pitch), m4_rotation_y(yaw)),
-             m4_rotation_z(0.0f));
-
+  state->udata.rotation = nm::rotation_y(yaw) *nm::rotation_x(pitch);
 }
 
 // Called when the app is about to close.
