@@ -331,6 +331,13 @@ inline vec<S, N>& operator/=(vec<S, N> &v, const S s) {
   return v;
 }
 
+template<class S, unsigned N>
+inline vec<S, N> operator-(const vec<S, N> &v) {
+  vec<S, N> result;
+  for (unsigned i = 0u; i < N; ++i) result.data[i] = -v.data[i];
+  return result;
+}
+
 /**
  * @return true if the given two vectors are strictly equal.
  */
@@ -652,12 +659,12 @@ inline constexpr auto translation(const vec<S, 3> &offset) {
  */
 template <class S>
 inline constexpr mat<S, 4> look_at(const vec<S, 3> &eye,
-                                        const vec<S, 3> &target,
-                                        const vec<S, 3> &up) {
+                                   const vec<S, 3> &target,
+                                   const vec<S, 3> &up) {
   constexpr S _0 = (S)0.0, _1 = (S)1.0;
   const vec<S, 3> z = -normalize(target - eye),
-                x =  normalize(cross(up, x)),
-                y =  cross(z, x);
+                  x =  normalize(cross(up, z)),
+                  y =  cross(z, x);
   return mat<S, 4>::from_rows(
     vec<S, 4> { x, -dot(eye, x) },
     vec<S, 4> { y, -dot(eye, y) },
