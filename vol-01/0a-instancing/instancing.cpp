@@ -22,16 +22,18 @@
 #define _CRT_SECURE_NO_WARNINGS
 #include "common.h"
 #include <nicegraf_util.h>
+#include <nicemath.h>
 #include <imgui.h>
-#define MATH_3D_IMPLEMENTATION
-#include "math_3d.h"
 #include <assert.h>
+
+using nm::float4x4;
+using nm::float3;
 
 constexpr uint32_t NUM_CUBES_H = 220u;
 constexpr uint32_t NUM_CUBES_V = 220u;
 
 union mtw {
-  mat4_t matrix;
+  float4x4 matrix;
   uint8_t padding[256];
 };
 
@@ -271,22 +273,23 @@ void on_frame(uint32_t w, uint32_t h, float, void *userdata) {
         0);
     // Create a uniform buffer.
     const ngf_uniform_buffer_info world_to_clip_ub_info =
-        { sizeof(mat4_t) };
+        { sizeof(float4x4) };
     err = state->world_to_clip_ub.initialize(world_to_clip_ub_info);
     assert(err == NGF_ERROR_OK);
 
     // Set up transforms.
-    const float  aspect_ratio = (float)w / (float)h;
-    const mat4_t view_to_clip   =
-        m4_perspective(70.0f, aspect_ratio, 0.01f, 1000.0f);
-    const mat4_t world_to_view =
-        m4_look_at(vec3(110.0f, 110.0f, 150.0f), vec3(110.0f, 110.0f, 0.0f),
-                   vec3(0.0f, 1.0f, 0.0f));
-    const mat4_t world_to_clip = m4_mul(world_to_view, view_to_clip);
+    const float  aspect_ratio   = (float)w / (float)h;
+    const float4x4 clip_from_view =
+        nm::perspective(70.0f, aspect_ratio, 0.01f, 1000.0f);
+    const float4x4 view_from_world =
+        nm::look_at(nm::float3 { 110.0f, 110.0f, 150.0f },
+                    nm::float3 { 110.0f, 110.0f, 0.0f },
+                    nm::float3 {0.0f, 1.0f, 0.0f});
+    const float4x4 world_to_clip = clip_from_view * view_from_world;
     err = state->dispose_queue.write_buffer(b,
                                             state->world_to_clip_ub,
                                             (void*)&world_to_clip,
-                                            sizeof(mat4_t),
+                                            sizeof(float4x4),
                                             0,
                                             0);
     assert(err == NGF_ERROR_OK);
@@ -319,7 +322,7 @@ void on_frame(uint32_t w, uint32_t h, float, void *userdata) {
   rbops[0].type = NGF_DESCRIPTOR_UNIFORM_BUFFER;
   rbops[0].info.uniform_buffer.buffer = state->world_to_clip_ub.get();
   rbops[0].info.uniform_buffer.offset = 0u;
-  rbops[0].info.uniform_buffer.range = sizeof(mat4_t);
+  rbops[0].info.uniform_buffer.range = sizeof(float4x4);
   rbops[1].target_set = 0u;
   rbops[1].target_binding = 2u;
   rbops[1].type = NGF_DESCRIPTOR_TEXTURE;
