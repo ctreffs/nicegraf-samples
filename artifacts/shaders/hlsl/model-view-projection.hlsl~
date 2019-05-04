@@ -1,0 +1,26 @@
+//T: mvp vs:VSMain ps:PSMain
+
+[vk::binding(0, 0)] cbuffer UniformData {
+  row_major float4x4 u_Transform;
+};
+
+struct PSInput {
+  float3 position : SV_POSITION;
+  float3 barycentric;
+};
+
+PSInput VSMain(float3 model_pos : ATTRIBUTE0, uint vid : SV_VertexID) {
+  const float3 barycentrics[] = {
+    float3 { 1.0, 0.0, 0.0 },
+    float3 { 0.0, 1.0, 0.0 },
+    float3 { 0.0, 0.0, 1.0 }
+  };
+  return PSInput {
+    mul(u_Transform, float4(model_pos, 1.0)),
+    barycentrics[vid % 3]
+  };
+}
+
+float4 PSMain(PSInput ps_in) {
+  return float4(ps_in.barycentric, 1.0);
+}

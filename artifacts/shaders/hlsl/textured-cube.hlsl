@@ -2,11 +2,11 @@
 //T: cubes-instanced ps:PSMain vs:VSMainInstanced
 
 [vk::binding(0, 0)] cbuffer ClipTransformMatrix {
-  row_major float4x4 u_WorldToClip;
+  force_column_major float4x4 u_WorldToClip;
 };
 
 [vk::binding(1, 0)] cbuffer WorldTransformMatrix {
-  row_major float4x4 u_ModelToWorld;
+  force_column_major float4x4 u_ModelToWorld;
 };
 
 [vk::binding(2, 0)] uniform Texture2D tex;

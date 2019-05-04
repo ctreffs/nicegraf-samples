@@ -13,7 +13,7 @@ struct ImGuiPSInput {
 };
 
 cbuffer MatUniformBuffer : register(b0){
-  row_major float4x4 u_Projection;
+  force_column_major float4x4 u_Projection;
 }
 
 [vk::binding(1, 0)] uniform Texture2D u_Texture;

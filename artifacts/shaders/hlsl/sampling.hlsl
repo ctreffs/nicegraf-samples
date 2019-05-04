@@ -6,7 +6,7 @@ struct PixelShaderInput {
 };
 
 [vk::binding(0, 1)] cbuffer UniformData {
-  row_major float4x4 u_TransformMatrix;
+  force_column_major float4x4 u_TransformMatrix;
 };
 
 PixelShaderInput VSMain(uint vid : SV_VertexID) {

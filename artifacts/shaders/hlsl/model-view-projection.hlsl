@@ -1,7 +1,7 @@
 //T: mvp vs:VSMain ps:PSMain
 
 [vk::binding(0, 0)] cbuffer UniformData {
-  row_major float4x4 u_Transform;
+  force_column_major float4x4 u_Transform;
 };
 
 struct PSInput {
