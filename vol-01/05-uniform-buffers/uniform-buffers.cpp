@@ -70,7 +70,7 @@ init_result on_initialized(uintptr_t native_handle,
   clear.clear_color[1] = 0.0f;
   clear.clear_color[2] = 0.0f;
   clear.clear_color[3] = 0.0f;
-  ngf_render_target *rt;
+  ngf_render_target rt;
   ngf_error err = ngf_default_render_target(NGF_LOAD_OP_CLEAR,
                                             NGF_LOAD_OP_DONTCARE,
                                             NGF_STORE_OP_STORE,
@@ -198,7 +198,7 @@ void on_frame(uint32_t w, uint32_t h, float time, void *userdata) {
   state->uniform_data.aspect_ratio = (float)w / (float)h;
   state->uniform_buffer.write(state->uniform_data);
   ngf_irect2d viewport { 0, 0, w, h };
-  ngf_cmd_buffer *cmd_buf = nullptr;
+  ngf_cmd_buffer cmd_buf = nullptr;
   ngf_cmd_buffer_info cmd_info;
   ngf_create_cmd_buffer(&cmd_info, &cmd_buf);
   ngf_start_cmd_buffer(cmd_buf);

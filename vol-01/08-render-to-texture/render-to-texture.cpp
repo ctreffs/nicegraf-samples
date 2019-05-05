@@ -69,7 +69,7 @@ init_result on_initialized(uintptr_t native_handle,
   assert(err == NGF_ERROR_OK);
   
   // Obtain the default render target.
-  ngf_render_target *rt;
+  ngf_render_target rt;
   err = ngf_default_render_target(NGF_LOAD_OP_CLEAR, NGF_LOAD_OP_DONTCARE,
                                   NGF_STORE_OP_STORE, NGF_STORE_OP_DONTCARE,
                                   &clear, NULL, &rt);
@@ -160,7 +160,7 @@ init_result on_initialized(uintptr_t native_handle,
 void on_frame(uint32_t w, uint32_t h, float, void *userdata) {
   app_state *state = (app_state*)userdata;
   ngf_irect2d viewport { 0, 0, w, h };
-  ngf_cmd_buffer *cmd_buf = nullptr;
+  ngf_cmd_buffer cmd_buf = nullptr;
   ngf_cmd_buffer_info cmd_info;
   ngf_create_cmd_buffer(&cmd_info, &cmd_buf);
   ngf_start_cmd_buffer(cmd_buf);

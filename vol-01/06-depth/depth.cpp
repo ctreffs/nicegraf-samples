@@ -54,7 +54,7 @@ init_result on_initialized(uintptr_t native_handle,
   app_state *state = new app_state;
 
   // Acquire the default render target.
-  ngf_render_target *default_rt;
+  ngf_render_target default_rt;
   // At the start of a render pass, we shall clear the color to transparent
   // black, and the depth to 1.0.
   ngf_clear cc, cd;
@@ -108,7 +108,7 @@ init_result on_initialized(uintptr_t native_handle,
 void on_frame(uint32_t w, uint32_t h, float, void *userdata) {
   auto state = (app_state*)userdata;
   ngf_irect2d viewport { 0, 0, w, h };
-  ngf_cmd_buffer *cmd_buf = nullptr;
+  ngf_cmd_buffer cmd_buf = nullptr;
   ngf_cmd_buffer_info cmd_info;
   ngf_create_cmd_buffer(&cmd_info, &cmd_buf);
   ngf_start_cmd_buffer(cmd_buf);

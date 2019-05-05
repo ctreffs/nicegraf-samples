@@ -108,7 +108,7 @@ int ENTRYFN(int, char **) {
   uibuf.initialize(uibuf_info);
 
   // Obtain the default render target.
-  ngf_render_target *defaultrt = nullptr;
+  ngf_render_target defaultrt = nullptr;
   ngf_default_render_target(NGF_LOAD_OP_DONTCARE,
                             NGF_LOAD_OP_DONTCARE,
                             NGF_STORE_OP_STORE,
@@ -156,7 +156,7 @@ int ENTRYFN(int, char **) {
       ui.record_rendering_commands(uibuf);
       ngf_cmd_end_pass(uibuf);
       ngf_end_cmd_buffer(uibuf);
-      ngf_cmd_buffer *b = uibuf.get();
+      ngf_cmd_buffer b = uibuf.get();
       ngf_submit_cmd_buffer(1u, &b);
 #endif
       // End frame.

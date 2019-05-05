@@ -65,7 +65,7 @@ init_result on_initialized(uintptr_t native_handle,
   assert(err == NGF_ERROR_OK);
 
   // Obtain the default render target.
-  ngf_render_target *rt;
+  ngf_render_target rt;
   ngf_default_render_target(NGF_LOAD_OP_CLEAR,
                             NGF_LOAD_OP_DONTCARE,
                             NGF_STORE_OP_STORE,
@@ -91,7 +91,7 @@ void on_frame(uint32_t, uint32_t, float, void *userdata) {
   ngf_cmd_begin_pass(cmd_buf, state->default_rt);
   ngf_cmd_end_pass(cmd_buf);
   ngf_end_cmd_buffer(cmd_buf);
-  ngf_cmd_buffer *b = cmd_buf.get();
+  ngf_cmd_buffer b = cmd_buf.get();
   ngf_submit_cmd_buffer(1u, &b);
 }
 

@@ -59,7 +59,7 @@ init_result on_initialized(uintptr_t native_window_handle,
                                             initial_window_height);
   
   // Obtain the default render target from the context that we just created.
-  ngf_render_target *default_render_target = nullptr;
+  ngf_render_target default_render_target = nullptr;
   ngf_clear clear_color = { { 0.0f, 0.0f, 0.0f, 0.0f } };
   ngf_error err =
       ngf_default_render_target(NGF_LOAD_OP_CLEAR,
@@ -95,7 +95,7 @@ void on_frame(uint32_t w, uint32_t h, float time, void *userdata) {
   static float prev_time = time;
 
   app_state      *state = (app_state*)userdata;
-  ngf_cmd_buffer *b     = state->cmdbuf.get();
+  ngf_cmd_buffer  b     = state->cmdbuf.get();
   state->uniform_data.write(uniform_data {
     time,
     time - prev_time,

@@ -10,7 +10,7 @@ ngf_imgui::ngf_imgui() {
   fragment_stage_ = load_shader_stage("imgui", "PSMain", NGF_STAGE_FRAGMENT);
 
   // Obtain default rendertarget.
-  ngf_render_target *rt;
+  ngf_render_target rt;
   ngf_error err =
       ngf_default_render_target(NGF_LOAD_OP_DONTCARE, NGF_LOAD_OP_DONTCARE,
                                 NGF_STORE_OP_STORE, NGF_STORE_OP_DONTCARE,
@@ -140,7 +140,7 @@ ngf_imgui::ngf_imgui() {
 
 #if !defined(NGF_NO_IMGUI)
 
-void ngf_imgui::upload_font_texture(ngf_cmd_buffer *cmdbuf) {
+void ngf_imgui::upload_font_texture(ngf_cmd_buffer cmdbuf) {
   const ngf_image_ref ref = {
     font_texture_.get(),
     0,
@@ -154,7 +154,7 @@ void ngf_imgui::upload_font_texture(ngf_cmd_buffer *cmdbuf) {
                       &tex_extent);
 }
 
-void ngf_imgui::record_rendering_commands(ngf_cmd_buffer *cmdbuf) {
+void ngf_imgui::record_rendering_commands(ngf_cmd_buffer cmdbuf) {
   ImGui::Render();
   ImDrawData *data = ImGui::GetDrawData();
   if (data->TotalIdxCount <= 0) return;
@@ -270,7 +270,7 @@ void ngf_imgui::record_rendering_commands(ngf_cmd_buffer *cmdbuf) {
     sizeof(ImDrawVert) * vertex_data.size(), // data size
     NGF_BUFFER_STORAGE_HOST_READABLE_WRITEABLE
   };
-  ngf_attrib_buffer *attrib_buffer = nullptr;
+  ngf_attrib_buffer attrib_buffer = nullptr;
   ngf_create_attrib_buffer(&attrib_buffer_info, &attrib_buffer);
   attrib_buffer_.reset(attrib_buffer);
   void *mapped_attrib_buffer =
@@ -286,7 +286,7 @@ void ngf_imgui::record_rendering_commands(ngf_cmd_buffer *cmdbuf) {
     sizeof(ImDrawIdx) * index_data.size(),
     NGF_BUFFER_STORAGE_HOST_READABLE_WRITEABLE
   };
-  ngf_index_buffer *index_buffer = nullptr;
+  ngf_index_buffer index_buffer = nullptr;
   ngf_create_index_buffer(&index_buffer_info, &index_buffer);
   index_buffer_.reset(index_buffer);
   void *mapped_index_buffer =
