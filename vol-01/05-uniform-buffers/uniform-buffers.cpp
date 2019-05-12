@@ -202,19 +202,19 @@ void on_frame(uint32_t w, uint32_t h, float time, void *userdata) {
   ngf_cmd_buffer_info cmd_info;
   ngf_create_cmd_buffer(&cmd_info, &cmd_buf);
   ngf_start_cmd_buffer(cmd_buf);
-  ngf_cmd_begin_pass(cmd_buf, state->default_rt);
-  ngf_cmd_bind_pipeline(cmd_buf, state->pipeline);
+  ngf::render_encoder renc { cmd_buf };
+  ngf_cmd_begin_pass(renc, state->default_rt);
+  ngf_cmd_bind_gfx_pipeline(renc, state->pipeline);
   ngf::cmd_bind_resources(
-      cmd_buf,
+      renc,
       state->uniform_buffer.bind_op_at_current_offset(0, 0));
-  ngf_cmd_bind_attrib_buffer(cmd_buf, state->vert_buffer, 0u, 0u);
-  ngf_cmd_bind_index_buffer(cmd_buf, state->index_buffer, NGF_TYPE_UINT16);
-  ngf_cmd_viewport(cmd_buf, &viewport);
-  ngf_cmd_scissor(cmd_buf, &viewport);
-  ngf_cmd_draw(cmd_buf, true, 0u, 3u * 6u, 1u); 
-  ngf_cmd_end_pass(cmd_buf);
-  ngf_end_cmd_buffer(cmd_buf);
-  ngf_submit_cmd_buffer(1u, &cmd_buf);
+  ngf_cmd_bind_attrib_buffer(renc, state->vert_buffer, 0u, 0u);
+  ngf_cmd_bind_index_buffer(renc, state->index_buffer, NGF_TYPE_UINT16);
+  ngf_cmd_viewport(renc, &viewport);
+  ngf_cmd_scissor(renc, &viewport);
+  ngf_cmd_draw(renc, true, 0u, 3u * 6u, 1u); 
+  ngf_cmd_end_pass(renc);
+  ngf_submit_cmd_buffers(1u, &cmd_buf);
   ngf_destroy_cmd_buffer(cmd_buf);
 }
 
