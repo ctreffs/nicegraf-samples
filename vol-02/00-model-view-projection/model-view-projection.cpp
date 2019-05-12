@@ -32,9 +32,6 @@ using nm::float4x4;
 using nm::float3;
 using nm::float4;
 
-constexpr uint32_t NUM_CUBES_H = 220u;
-constexpr uint32_t NUM_CUBES_V = 220u;
-
 union uniform_data {
   float4x4 matrix;
   uint8_t padding[256];
@@ -176,9 +173,9 @@ void on_frame(uint32_t w, uint32_t h, float, void *userdata) {
       for (const tinyobj::index_t &idx : obj_shape.mesh.indices) {
         const int vidx = idx.vertex_index;
         const int vi = 3 * vidx;
-        vert_data.push_back(float3 { obj_attribs.vertices[vi + 0],
-                                     obj_attribs.vertices[vi + 1],
-                                     obj_attribs.vertices[vi + 2]});
+        vert_data.push_back(float3 { obj_attribs.vertices[(unsigned)vi + 0u],
+                                     obj_attribs.vertices[(unsigned)vi + 1u],
+                                     obj_attribs.vertices[(unsigned)vi + 2u]});
       }
     }
     ngf_attrib_buffer_info attr_info = {
