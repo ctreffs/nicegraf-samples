@@ -150,10 +150,8 @@ void ngf_imgui::upload_font_texture(ngf_cmd_buffer cmdbuf) {
   };
   ngf_offset3d tex_offset {0, 0, 0};
   ngf_extent3d tex_extent {512, 64, 1};
-  ngf_xfer_encoder enc;
-  ngf_error err = ngf_cmd_buffer_start_xfer(cmdbuf, &enc);
-  assert(err == NGF_ERROR_OK);
-  ngf_cmd_write_image(enc, texture_data_.get(), 0, ref, &tex_offset,
+  ngf::xfer_encoder xfenc { cmdbuf };
+  ngf_cmd_write_image(xfenc, texture_data_.get(), 0, ref, &tex_offset,
                       &tex_extent);
 }
 

@@ -152,8 +152,7 @@ int ENTRYFN(int, char **) {
         ui.upload_font_texture(uibuf);
         imgui_font_uploaded = true;
       }
-      ngf_render_encoder enc;
-      ngf_cmd_buffer_start_render(uibuf, &enc);
+      ngf::render_encoder enc { uibuf };
       ngf_cmd_begin_pass(enc, defaultrt);
       ui.record_rendering_commands(enc);
       ngf_cmd_end_pass(enc);
