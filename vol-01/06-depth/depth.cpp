@@ -126,14 +126,15 @@ void on_frame(uint32_t w, uint32_t h, float, void *userdata) {
     triangle_data red_triangle {
       0.25f, -0.1f, 0.1f, 0.1f, {1.0f, 0.5f, 0.1f, 1.0f}
     }, blue_triangle { 0.25f, 0.1f, -0.1f, 0.5f, {0.1f, 0.5f, 1.0f, 1.0f}};
-    err  = state->discard_queue.write_buffer(cmd_buf,
+    ngf::xfer_encoder xfenc { cmd_buf };
+    err  = state->discard_queue.write_buffer(xfenc,
                                              state->uniform_data[0],
                                              &red_triangle,
                                              sizeof(red_triangle),
                                              0,
                                              0);
     assert(err == NGF_ERROR_OK);
-    err = state->discard_queue.write_buffer(cmd_buf,
+    err = state->discard_queue.write_buffer(xfenc,
                                             state->uniform_data[1],
                                             &blue_triangle,
                                             sizeof(blue_triangle),
@@ -142,10 +143,11 @@ void on_frame(uint32_t w, uint32_t h, float, void *userdata) {
     assert(err == NGF_ERROR_OK);
     state->uniform_data_uploaded = true;
   }
-  ngf_cmd_begin_pass(cmd_buf, state->default_rt);
-  ngf_cmd_bind_pipeline(cmd_buf, state->pipeline);
-  ngf_cmd_viewport(cmd_buf, &viewport);
-  ngf_cmd_scissor(cmd_buf, &viewport);
+  ngf::render_encoder renc { cmd_buf };
+  ngf_cmd_begin_pass(renc, state->default_rt);
+  ngf_cmd_bind_gfx_pipeline(renc, state->pipeline);
+  ngf_cmd_viewport(renc, &viewport);
+  ngf_cmd_scissor(renc, &viewport);
 
   for (uint32_t i = 0u; i < 2u; ++i) {
     ngf_resource_bind_op bind_op;
@@ -155,12 +157,11 @@ void on_frame(uint32_t w, uint32_t h, float, void *userdata) {
     bind_op.info.uniform_buffer.buffer = state->uniform_data[i].get();
     bind_op.info.uniform_buffer.offset = 0u;
     bind_op.info.uniform_buffer.range = sizeof(triangle_data);
-    ngf_cmd_bind_resources(cmd_buf, &bind_op, 1u);
-    ngf_cmd_draw(cmd_buf, false, 0u, 3u, 1u); 
+    ngf_cmd_bind_gfx_resources(renc, &bind_op, 1u);
+    ngf_cmd_draw(renc, false, 0u, 3u, 1u); 
   }
-  ngf_cmd_end_pass(cmd_buf);
-  ngf_end_cmd_buffer(cmd_buf);
-  ngf_submit_cmd_buffer(1u, &cmd_buf);
+  ngf_cmd_end_pass(renc);
+  ngf_submit_cmd_buffers(1u, &cmd_buf);
   ngf_destroy_cmd_buffer(cmd_buf);
 }
 
