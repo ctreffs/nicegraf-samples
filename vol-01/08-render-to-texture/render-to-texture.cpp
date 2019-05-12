@@ -164,21 +164,21 @@ void on_frame(uint32_t w, uint32_t h, float, void *userdata) {
   ngf_cmd_buffer_info cmd_info;
   ngf_create_cmd_buffer(&cmd_info, &cmd_buf);
   ngf_start_cmd_buffer(cmd_buf);
-  ngf_cmd_begin_pass(cmd_buf, state->offscreen_rt);
-  ngf_cmd_bind_pipeline(cmd_buf, state->offscreen_pipeline);
-  ngf_cmd_draw(cmd_buf, false, 0u, 3u, 1u);
-  ngf_cmd_end_pass(cmd_buf);
-  ngf_cmd_begin_pass(cmd_buf, state->default_rt);
-  ngf_cmd_bind_pipeline(cmd_buf, state->blit_pipeline);
-  ngf_cmd_viewport(cmd_buf, &viewport);
-  ngf_cmd_scissor(cmd_buf, &viewport);
-  ngf::cmd_bind_resources(cmd_buf,
+  ngf::render_encoder renc { cmd_buf };
+  ngf_cmd_begin_pass(renc, state->offscreen_rt);
+  ngf_cmd_bind_gfx_pipeline(renc, state->offscreen_pipeline);
+  ngf_cmd_draw(renc, false, 0u, 3u, 1u);
+  ngf_cmd_end_pass(renc);
+  ngf_cmd_begin_pass(renc, state->default_rt);
+  ngf_cmd_bind_gfx_pipeline(renc, state->blit_pipeline);
+  ngf_cmd_viewport(renc, &viewport);
+  ngf_cmd_scissor(renc, &viewport);
+  ngf::cmd_bind_resources(renc,
     ngf::descriptor_set<0>::binding<1>::texture(state->rt_texture.get()),
     ngf::descriptor_set<0>::binding<2>::sampler(state->sampler.get()));
-  ngf_cmd_draw(cmd_buf, false, 0u, 3u, 1u);
-  ngf_cmd_end_pass(cmd_buf);
-  ngf_end_cmd_buffer(cmd_buf);
-  ngf_submit_cmd_buffer(1u, &cmd_buf);
+  ngf_cmd_draw(renc, false, 0u, 3u, 1u);
+  ngf_cmd_end_pass(renc);
+  ngf_submit_cmd_buffers(1u, &cmd_buf);
   ngf_destroy_cmd_buffer(cmd_buf);
 }
 
