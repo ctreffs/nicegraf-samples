@@ -171,11 +171,11 @@ void on_frame(uint32_t w, uint32_t h, float, void *userdata) {
     assert(obj_load_success);
     for (const tinyobj::shape_t &obj_shape : obj_shapes) {
       for (const tinyobj::index_t &idx : obj_shape.mesh.indices) {
-        const int vidx = idx.vertex_index;
-        const int vi = 3 * vidx;
-        vert_data.push_back(float3 { obj_attribs.vertices[(unsigned)vi + 0u],
-                                     obj_attribs.vertices[(unsigned)vi + 1u],
-                                     obj_attribs.vertices[(unsigned)vi + 2u]});
+        const unsigned vidx = (unsigned)idx.vertex_index;
+        const unsigned vi = 3u * vidx;
+        vert_data.push_back(float3 { obj_attribs.vertices[vi + 0u],
+                                     obj_attribs.vertices[vi + 1u],
+                                     obj_attribs.vertices[vi + 2u]});
       }
     }
     ngf_attrib_buffer_info attr_info = {
