@@ -177,13 +177,13 @@ init_result on_initialized(uintptr_t native_handle,
 void draw_textured_quad(const ngf::streamed_uniform<uniform_data> &ubo,
                         size_t pane,
                         const ngf_sampler sampler,
-                        ngf_cmd_buffer cmd_buf) {
-  ngf::cmd_bind_resources(cmd_buf,
+                        ngf_render_encoder renc) {
+  ngf::cmd_bind_resources(renc,
                          ngf::descriptor_set<1>::binding<1>::sampler(sampler),
                          ubo.bind_op_at_current_offset(
                             1, 0, sizeof(pane_uniform_data) * pane));
                          
-  ngf_cmd_draw(cmd_buf, false, 0u, 6u, 1u);
+  ngf_cmd_draw(renc, false, 0u, 6u, 1u);
 }
 
 // Called every frame.
@@ -220,8 +220,9 @@ void on_frame(uint32_t w, uint32_t h, float, void *userdata) {
     for (uint32_t mip_level = 0u;  mip_level < 11u; ++mip_level) {
       snprintf(file_name, sizeof(file_name), "textures/TILES%d.DATA", mip_level);
       std::vector<char> data = load_raw_data(file_name);
+      ngf::xfer_encoder xfenc { cmd_buf };
       const ngf_error err =
-        state->dispose_queue.write_image(cmd_buf,
+        state->dispose_queue.write_image(xfenc,
                                          data.data(),
                                          data.size(),
                                          0u,
@@ -234,20 +235,20 @@ void on_frame(uint32_t w, uint32_t h, float, void *userdata) {
     }
     state->textures_uploaded = true;
   }
-  ngf_cmd_begin_pass(cmd_buf, state->default_rt);
-  ngf_cmd_bind_pipeline(cmd_buf, state->pipeline);
-  ngf_cmd_viewport(cmd_buf, &viewport);
-  ngf_cmd_scissor(cmd_buf, &viewport);
+  ngf::render_encoder renc { cmd_buf };
+  ngf_cmd_begin_pass(renc, state->default_rt);
+  ngf_cmd_bind_gfx_pipeline(renc, state->pipeline);
+  ngf_cmd_viewport(renc, &viewport);
+  ngf_cmd_scissor(renc, &viewport);
   ngf::cmd_bind_resources(
-      cmd_buf,
+      renc,
       ngf::descriptor_set<0>::binding<0>::texture(state->image));
-  draw_textured_quad(state->ubo, 0, state->nearest_sampler, cmd_buf);
-  draw_textured_quad(state->ubo, 1, state->bilinear_sampler, cmd_buf);
-  draw_textured_quad(state->ubo, 2, state->trilinear_sampler, cmd_buf);
-  draw_textured_quad(state->ubo, 3, state->aniso_sampler, cmd_buf);
-  ngf_cmd_end_pass(cmd_buf);
-  ngf_end_cmd_buffer(cmd_buf);
-  ngf_submit_cmd_buffer(1u, &cmd_buf);
+  draw_textured_quad(state->ubo, 0, state->nearest_sampler, renc);
+  draw_textured_quad(state->ubo, 1, state->bilinear_sampler, renc);
+  draw_textured_quad(state->ubo, 2, state->trilinear_sampler, renc);
+  draw_textured_quad(state->ubo, 3, state->aniso_sampler, renc);
+  ngf_cmd_end_pass(renc);
+  ngf_submit_cmd_buffers(1u, &cmd_buf);
   ngf_destroy_cmd_buffer(cmd_buf);
 }
 

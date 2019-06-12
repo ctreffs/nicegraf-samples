@@ -88,11 +88,12 @@ void on_frame(uint32_t, uint32_t, float, void *userdata) {
   app_state *state = (app_state*)userdata;
   ngf::cmd_buffer &cmd_buf = state->cmd_buf;
   ngf_start_cmd_buffer(cmd_buf);
-  ngf_cmd_begin_pass(cmd_buf, state->default_rt);
-  ngf_cmd_end_pass(cmd_buf);
-  ngf_end_cmd_buffer(cmd_buf);
+  ngf_render_encoder enc;
+  ngf_cmd_buffer_start_render(cmd_buf, &enc);
+  ngf_cmd_begin_pass(enc, state->default_rt);
+  ngf_cmd_end_pass(enc);
   ngf_cmd_buffer b = cmd_buf.get();
-  ngf_submit_cmd_buffer(1u, &b);
+  ngf_submit_cmd_buffers(1u, &b);
 }
 
 // Called every time the application has to draw an ImGUI overlay.

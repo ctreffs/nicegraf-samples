@@ -12,7 +12,7 @@ public:
 
   // Records commands for rendering the contents of ImGui draw data into the
   // given command buffer.
-  void record_rendering_commands(ngf_cmd_buffer cmdbuf);
+  void record_rendering_commands(ngf_render_encoder enc);
 
   // Records commands that upload the imgui font atlas. This only needs to be
   // called once.
