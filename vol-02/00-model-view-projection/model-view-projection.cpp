@@ -158,6 +158,7 @@ void on_frame(uint32_t w, uint32_t h, float, void *userdata) {
 
   ngf_start_cmd_buffer(b);
   if (!state->buffers_uploaded) {
+    ngf::xfer_encoder xfer_enc { b };
     tinyobj::attrib_t obj_attribs;
     std::vector<float3> vert_data;
     std::vector<tinyobj::shape_t>  obj_shapes;
@@ -184,7 +185,7 @@ void on_frame(uint32_t w, uint32_t h, float, void *userdata) {
     ngf_error err = state->attr_buf.initialize(attr_info);
     assert(err == NGF_ERROR_OK);
 
-    state->dispose_queue.write_buffer(b,
+    state->dispose_queue.write_buffer(xfer_enc,
                                       state->attr_buf,
                                (void*)vert_data.data(),
                                       attr_info.size,
@@ -208,21 +209,21 @@ void on_frame(uint32_t w, uint32_t h, float, void *userdata) {
       state->clip_from_view * state->view_from_world * state->world_from_model
   };
   state->uniform_buffer.write(final_transform);
-  ngf_cmd_begin_pass(b, state->default_render_target.get());
-  ngf_cmd_bind_pipeline(b, state->pipeline.get());
+  ngf::render_encoder render_enc { b };
+  ngf_cmd_begin_pass(render_enc, state->default_render_target.get());
+  ngf_cmd_bind_gfx_pipeline(render_enc, state->pipeline.get());
   ngf::cmd_bind_resources(
-    b,
+    render_enc,
     state->uniform_buffer.bind_op_at_current_offset(0, 0));
   const ngf_irect2d viewport_rect{
     0, 0, w, h
   };
-  ngf_cmd_viewport(b,&viewport_rect);
-  ngf_cmd_scissor(b, &viewport_rect);
-  ngf_cmd_bind_attrib_buffer(b, state->attr_buf.get(), 0, 0);
-  ngf_cmd_draw(b, false, 0, state->num_elements, 1u);
-  ngf_cmd_end_pass(b);
-  ngf_end_cmd_buffer(b);
-  ngf_submit_cmd_buffer(1u, &b);
+  ngf_cmd_viewport(render_enc, &viewport_rect);
+  ngf_cmd_scissor(render_enc, &viewport_rect);
+  ngf_cmd_bind_attrib_buffer(render_enc, state->attr_buf.get(), 0, 0);
+  ngf_cmd_draw(render_enc, false, 0, state->num_elements, 1u);
+  ngf_cmd_end_pass(render_enc);
+  ngf_submit_cmd_buffers(1u, &b);
 }
 
 void on_ui(void *userdata) { 

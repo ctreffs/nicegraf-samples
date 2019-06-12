@@ -89,6 +89,9 @@ add_library(common
  
 target_include_directories(common PUBLIC
   ${CMAKE_CURRENT_LIST_DIR}/common)
+
+target_include_directories(common PRIVATE
+  ${CMAKE_CURRENT_LIST_DIR}/artifacts/shaders/generated)
   
 target_compile_options(common PRIVATE ${COMMON_COMPILE_OPTS})
 
@@ -131,10 +134,12 @@ foreach(source_path ${shader_files})
       list(APPEND output_files_list "${CMAKE_CURRENT_LIST_DIR}/artifacts/shaders/generated/${tech}.ps.12.msl")
       list(APPEND output_files_list "${CMAKE_CURRENT_LIST_DIR}/artifacts/shaders/generated/${tech}.pipeline")
     endforeach(tech)
+    get_filename_component(header_file_name ${source_path} NAME_WE)
+    list(APPEND output_files_list "${CMAKE_CURRENT_LIST_DIR}/artifacts/shaders/generated/${header_file_name}_binding_consts.h")
     add_custom_command(OUTPUT ${output_files_list}
                        MAIN_DEPENDENCY ${source_path}
                        DEPENDS nicegraf_shaderc
-                       COMMAND ${CMAKE_CURRENT_LIST_DIR}/nicegraf-shaderc/nicegraf_shaderc${EXECUTABLE_SUFFIX} ARGS ${source_path} "-t" "gl430" "-t" "msl12" "-t" "spv" "-O" "../generated/"
+                       COMMAND ${CMAKE_CURRENT_LIST_DIR}/nicegraf-shaderc/nicegraf_shaderc${EXECUTABLE_SUFFIX} ARGS ${source_path} "-t" "gl430" "-t" "msl12" "-t" "spv" "-O" "../generated/" "-h" "${header_file_name}_binding_consts.h"
                        WORKING_DIRECTORY ${CMAKE_CURRENT_LIST_DIR}/artifacts/shaders/hlsl)
     set(generated_shaders_list "${output_files_list};${generated_shaders_list}")
   endif()
@@ -147,8 +152,8 @@ function (add_sample volume number name)
     "${CMAKE_CURRENT_LIST_DIR}/vol-${volume}/${number}-${name}/${name}.cpp")
   target_link_libraries(${SAMPLE} common ${NGF_OPENGL_LIB})
   target_compile_options(${SAMPLE} PRIVATE ${COMMON_COMPILE_OPTS})
-  target_include_directories(${SAMPLE} PRIVATE ${CMAKE_CURRENT_LIST_DIR}/third_party/math_3d)
   target_include_directories(${SAMPLE} PRIVATE ${CMAKE_CURRENT_LIST_DIR}/third_party/tinyobjloader)
+  target_include_directories(${SAMPLE} PRIVATE ${CMAKE_CURRENT_LIST_DIR}/artifacts/shaders/generated)
   add_dependencies(${SAMPLE} generated_shaders)
   set_output_dir(${SAMPLE} "${CMAKE_CURRENT_LIST_DIR}/artifacts")
   set_target_properties(${SAMPLE} PROPERTIES PDB_OUTPUT_DIRECTORY "${CMAKE_CURRENT_LIST_DIR}/build")

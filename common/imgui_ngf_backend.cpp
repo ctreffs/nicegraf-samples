@@ -1,4 +1,5 @@
 #include "imgui_ngf_backend.h"
+#include "imgui_binding_consts.h"
 #include "common.h"
 #include <nicegraf_util.h>
 #include <assert.h>
@@ -150,11 +151,12 @@ void ngf_imgui::upload_font_texture(ngf_cmd_buffer cmdbuf) {
   };
   ngf_offset3d tex_offset {0, 0, 0};
   ngf_extent3d tex_extent {512, 64, 1};
-  ngf_cmd_write_image(cmdbuf, texture_data_.get(), 0, ref, &tex_offset,
+  ngf::xfer_encoder xfenc { cmdbuf };
+  ngf_cmd_write_image(xfenc, texture_data_.get(), 0, ref, &tex_offset,
                       &tex_extent);
 }
 
-void ngf_imgui::record_rendering_commands(ngf_cmd_buffer cmdbuf) {
+void ngf_imgui::record_rendering_commands(ngf_render_encoder enc) {
   ImGui::Render();
   ImDrawData *data = ImGui::GetDrawData();
   if (data->TotalIdxCount <= 0) return;
@@ -185,21 +187,23 @@ void ngf_imgui::record_rendering_commands(ngf_cmd_buffer cmdbuf) {
   uniform_data_.write(ortho_projection);
 
   // Bind the ImGui rendering pipeline.
-  ngf_cmd_bind_pipeline(cmdbuf, pipeline_);
+  ngf_cmd_bind_gfx_pipeline(enc, pipeline_);
   
   // Bind resources.
   ngf::cmd_bind_resources(
-      cmdbuf,
+      enc,
       uniform_data_.bind_op_at_current_offset(0u, 0u),
-      ngf::descriptor_set<0>::binding<1>::texture(font_texture_.get()),
-      ngf::descriptor_set<0>::binding<2>::sampler(tex_sampler_.get()));
+      ngf::descriptor_set<0>::binding<imgui::u_Texture_Binding>::texture(
+          font_texture_.get()),
+      ngf::descriptor_set<0>::binding<imgui::u_Sampler_Binding>::sampler(
+          tex_sampler_.get()));
 
   // Set viewport.
   ngf_irect2d viewport_rect = {
     0u, 0u,
     (uint32_t)fb_width, (uint32_t)fb_height
   };
-  ngf_cmd_viewport(cmdbuf, &viewport_rect);
+  ngf_cmd_viewport(enc, &viewport_rect);
 
   // These vectors will store vertex and index data for the draw calls.
   // Later this data will be transferred to GPU buffers.
@@ -298,13 +302,13 @@ void ngf_imgui::record_rendering_commands(ngf_cmd_buffer cmdbuf) {
   ngf_index_buffer_flush_range(index_buffer, 0, index_buffer_info.size);
   ngf_index_buffer_unmap(index_buffer);
 
-  ngf_cmd_bind_index_buffer(cmdbuf, index_buffer_,
+  ngf_cmd_bind_index_buffer(enc, index_buffer_,
                             sizeof(ImDrawIdx) < 4
                                 ? NGF_TYPE_UINT16 : NGF_TYPE_UINT32);
-  ngf_cmd_bind_attrib_buffer(cmdbuf, attrib_buffer_, 0u, 0u);
+  ngf_cmd_bind_attrib_buffer(enc, attrib_buffer_, 0u, 0u);
   for (const auto &draw : draw_data) {
-    ngf_cmd_scissor(cmdbuf, &draw.scissor);
-    ngf_cmd_draw(cmdbuf, true, draw.first_elem, draw.nelem, 1u);
+    ngf_cmd_scissor(enc, &draw.scissor);
+    ngf_cmd_draw(enc, true, draw.first_elem, draw.nelem, 1u);
   }
 }
 #else

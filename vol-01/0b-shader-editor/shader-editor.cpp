@@ -103,22 +103,22 @@ void on_frame(uint32_t w, uint32_t h, float time, void *userdata) {
     (float)h
   });
   ngf_start_cmd_buffer(b);
-  ngf_cmd_begin_pass(b, state->default_render_target.get());
+  ngf::render_encoder renc { b };
+  ngf_cmd_begin_pass(renc, state->default_render_target.get());
   if (state->pipeline.get() != nullptr) {
-    ngf_cmd_bind_pipeline(b, state->pipeline.get());
+    ngf_cmd_bind_gfx_pipeline(renc, state->pipeline.get());
     ngf_resource_bind_op rbop =
         state->uniform_data.bind_op_at_current_offset(0, 0);
-    ngf_cmd_bind_resources(b, &rbop, 1u);
+    ngf_cmd_bind_gfx_resources(renc, &rbop, 1u);
     const ngf_irect2d viewport_rect{
       0, 0, w, h
     };
-    ngf_cmd_viewport(b,&viewport_rect);
-    ngf_cmd_scissor(b, &viewport_rect);
-    ngf_cmd_draw(b, false, 0, 3, 1);
+    ngf_cmd_viewport(renc, &viewport_rect);
+    ngf_cmd_scissor(renc, &viewport_rect);
+    ngf_cmd_draw(renc, false, 0, 3, 1);
   }
-  ngf_cmd_end_pass(b);
-  ngf_end_cmd_buffer(b);
-  ngf_submit_cmd_buffer(1u, &b);
+  ngf_cmd_end_pass(renc);
+  ngf_submit_cmd_buffers(1u, &b);
 }
 
 void on_ui(void *userdata) {

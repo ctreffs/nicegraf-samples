@@ -257,15 +257,16 @@ void on_frame(uint32_t w, uint32_t h, float, void *userdata) {
     assert(err == NGF_ERROR_OK);
     err = state->idx_buf.initialize(index_info);
     assert(err == NGF_ERROR_OK);
+    ngf::xfer_encoder xfenc { b };
     state->dispose_queue.write_buffer(
-        b,
+        xfenc,
         state->attr_buf,
         (void*)cube_vert_attribs,
         sizeof(cube_vert_attribs),
         0,
         0);
     state->dispose_queue.write_buffer(
-        b,
+        xfenc,
         state->idx_buf,
         (void*)cube_indices,
         sizeof(cube_indices),
@@ -286,7 +287,7 @@ void on_frame(uint32_t w, uint32_t h, float, void *userdata) {
                     nm::float3 { 110.0f, 110.0f, 0.0f },
                     nm::float3 {0.0f, 1.0f, 0.0f});
     const float4x4 world_to_clip = clip_from_view * view_from_world;
-    err = state->dispose_queue.write_buffer(b,
+    err = state->dispose_queue.write_buffer(xfenc,
                                             state->world_to_clip_ub,
                                             (void*)&world_to_clip,
                                             sizeof(float4x4),
@@ -302,7 +303,7 @@ void on_frame(uint32_t w, uint32_t h, float, void *userdata) {
     uint8_t *image_data = new uint8_t[image_data_size];
     fread(image_data, 1, image_data_size, image);
     fclose(image);
-    err = state->dispose_queue.write_image(b,
+    err = state->dispose_queue.write_image(xfenc,
                                            image_data,
                                            image_data_size,
                                            0,
@@ -313,8 +314,9 @@ void on_frame(uint32_t w, uint32_t h, float, void *userdata) {
     assert(err == NGF_ERROR_OK);
     state->resources_uploaded = true;
   }
-  ngf_cmd_begin_pass(b, state->default_render_target.get());
-  ngf_cmd_bind_pipeline(b, state->pipeline.get());
+  ngf::render_encoder renc { b };
+  ngf_cmd_begin_pass(renc, state->default_render_target.get());
+  ngf_cmd_bind_gfx_pipeline(renc, state->pipeline.get());
 
   ngf_resource_bind_op rbops[3];
   rbops[0].target_set = 0u;
@@ -331,19 +333,18 @@ void on_frame(uint32_t w, uint32_t h, float, void *userdata) {
   rbops[2].target_binding = 3u;
   rbops[2].type = NGF_DESCRIPTOR_SAMPLER;
   rbops[2].info.image_sampler.sampler = state->sampler.get();
-  ngf_cmd_bind_resources(b, rbops, 3u);
+  ngf_cmd_bind_gfx_resources(renc, rbops, 3u);
   const ngf_irect2d viewport_rect{
     0, 0, w, h
   };
-  ngf_cmd_viewport(b,&viewport_rect);
-  ngf_cmd_scissor(b, &viewport_rect);
-  ngf_cmd_bind_attrib_buffer(b, state->attr_buf.get(), 0, 0);
-  ngf_cmd_bind_index_buffer(b, state->idx_buf.get(), NGF_TYPE_UINT16);
-  ngf_cmd_draw(b, true, 0, 36, NUM_CUBES_H * NUM_CUBES_V);
+  ngf_cmd_viewport(renc, &viewport_rect);
+  ngf_cmd_scissor(renc, &viewport_rect);
+  ngf_cmd_bind_attrib_buffer(renc, state->attr_buf.get(), 0, 0);
+  ngf_cmd_bind_index_buffer(renc, state->idx_buf.get(), NGF_TYPE_UINT16);
+  ngf_cmd_draw(renc, true, 0, 36, NUM_CUBES_H * NUM_CUBES_V);
 
-  ngf_cmd_end_pass(b);
-  ngf_end_cmd_buffer(b);
-  ngf_submit_cmd_buffer(1u, &b);
+  ngf_cmd_end_pass(renc);
+  ngf_submit_cmd_buffers(1u, &b);
 }
 
 void on_ui(void*) { }
