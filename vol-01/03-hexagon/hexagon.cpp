@@ -157,11 +157,13 @@ void on_frame(uint32_t w, uint32_t h, float, void *userdata) {
     }
     ngf_buffer_info staging_buf_info {
       sizeof(vertices),
-      NGF_BUFFER_STORAGE_HOST_WRITEABLE
+      NGF_BUFFER_STORAGE_HOST_WRITEABLE,
+      NGF_BUFFER_USAGE_XFER_SRC
     };
     ngf_buffer_info buf_info{
       sizeof(vertices),
-      NGF_BUFFER_STORAGE_PRIVATE
+      NGF_BUFFER_STORAGE_PRIVATE,
+      NGF_BUFFER_USAGE_XFER_DST
     };
     ngf_attrib_buffer staging_buffer = nullptr, buffer = nullptr;
     ngf_error err =
